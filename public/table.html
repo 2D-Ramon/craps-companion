@@ -1,0 +1,1000 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0f3d2e" />
+  <meta http-equiv="Cache-Control" content="no-store" />
+  <title>Craps table</title>
+  <style>
+    :root { --felt:#0f3d2e; --deep:#071c16; --gold:#c9a227; --ink:#f4f1e8; --muted:#9bb0a6; --seven:#c23b2e; --win:#7dce82; --danger:#e85d4c; }
+    * { box-sizing: border-box; }
+    body { margin:0; font-family: Arial, sans-serif; background:#071c16; color:var(--ink); }
+    header { position:sticky; top:0; background:#071c16; border-bottom:2px solid var(--gold); padding:10px 14px; padding-top:max(10px, env(safe-area-inset-top)); display:flex; justify-content:space-between; align-items:baseline; }
+    .mark { letter-spacing:.28em; color:var(--gold); font-weight:700; font-size:14px; }
+    .ver { color:var(--muted); font-size:11px; letter-spacing:0; }
+    main { max-width:480px; margin:0 auto; padding:12px 12px 96px; }
+    h1 { color:var(--gold); font-size:28px; margin:4px 0 8px; }
+    label { display:block; font-size:14px; margin:10px 0; }
+    input, select { width:100%; height:48px; margin-top:6px; border-radius:10px; border:1px solid rgba(201,162,39,.35); background:rgba(0,0,0,.35); color:var(--ink); padding:0 12px; font-size:16px; }
+    .row { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    .btn { width:100%; height:56px; border:0; border-radius:12px; background:var(--gold); color:var(--deep); font-size:18px; font-weight:700; margin:12px 0; }
+    .btn-ghost { background:rgba(0,0,0,.35); color:var(--ink); border:1px solid rgba(201,162,39,.3); }
+    .btn-danger { background:transparent; color:var(--danger); border:1px solid var(--danger); }
+    .card { background:rgba(0,0,0,.28); border:1px solid rgba(201,162,39,.22); border-radius:12px; padding:12px; margin:10px 0; }
+    .muted { color:var(--muted); font-size:13px; }
+    .err { background:rgba(232,93,76,.2); border:1px solid var(--danger); padding:10px; border-radius:10px; }
+    nav { position:fixed; bottom:0; left:0; right:0; background:#071c16; border-top:1px solid rgba(201,162,39,.3); display:grid; grid-template-columns:repeat(5,1fr); text-align:center; padding-bottom:env(safe-area-inset-bottom); }
+    nav button { background:none; border:0; color:var(--muted); padding:14px 0; font-size:11px; }
+    nav button.on { color:var(--gold); }
+    .pad { display:grid; grid-template-columns:repeat(6,1fr); gap:6px; }
+    .pad button { height:52px; border-radius:10px; border:1px solid rgba(201,162,39,.3); background:#145c45; color:#fff; font-size:18px; font-weight:700; }
+    .pad button.sel { background:var(--gold); color:var(--deep); }
+    .totals { display:grid; grid-template-columns:repeat(6,1fr); gap:6px; margin-top:8px; }
+    .totals button { height:44px; border-radius:8px; border:1px solid rgba(201,162,39,.25); background:rgba(0,0,0,.3); color:#fff; }
+    .totals button.seven { background:var(--seven); }
+    .strip { display:flex; gap:6px; overflow-x:auto; padding-bottom:6px; }
+    .chip { flex:0 0 46px; height:56px; border-radius:8px; background:rgba(0,0,0,.35); border:1px solid rgba(201,162,39,.2); display:flex; flex-direction:column; align-items:center; justify-content:center; font-weight:700; }
+    .chip .mark { font-size:9px; font-weight:700; letter-spacing:.03em; line-height:1.1; margin-top:2px; }
+    .chip.onset { background:rgba(201,162,39,.22); border-color:var(--gold); color:var(--gold); }
+    .chip.hit { background:rgba(125,206,130,.22); border-color:var(--win); color:var(--win); }
+    .chip.out { background:var(--seven); color:#fff; }
+    .chip.nat { background:rgba(125,206,130,.18); border-color:var(--win); }
+    .chip.craps { opacity:.85; }
+    .chip.working { border-color:rgba(201,162,39,.55); }
+    .legend { font-size:11px; color:var(--muted); margin:4px 0 10px; line-height:1.35; }
+    .stats { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+    .stat { background:rgba(0,0,0,.3); border-radius:12px; padding:10px; }
+    .stat b { display:block; font-size:22px; }
+    .pcts { display:grid; grid-template-columns:repeat(6,1fr); gap:4px; }
+    .pct { text-align:center; background:rgba(0,0,0,.3); border-radius:8px; padding:6px 2px; font-size:11px; }
+    .gold { color:var(--gold); }
+    .win { color:var(--win); }
+    .loss { color:var(--danger); }
+    .hidden { display:none !important; }
+    .strat { width:100%; text-align:left; padding:10px; border-radius:12px; border:1px solid rgba(201,162,39,.2); background:rgba(0,0,0,.25); color:var(--ink); margin:6px 0; }
+    .strat.on { border-color:var(--gold); background:rgba(201,162,39,.15); }
+    .felt { background:#0c4a38; border:2px solid var(--gold); border-radius:14px; padding:8px; }
+    .spot { min-height:46px; border:1px solid rgba(255,255,255,.28); border-radius:8px; padding:5px 4px; text-align:center; font-size:11px; background:rgba(0,0,0,.18); color:#fff; }
+    .spot b { display:block; color:var(--gold); font-size:14px; }
+    .spot.has { background:rgba(201,162,39,.2); }
+    .chipsel { display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin:8px 0; }
+    .chipsel button { height:40px; border-radius:8px; border:1px solid rgba(201,162,39,.3); background:rgba(0,0,0,.3); color:#fff; }
+    .chipsel button.on { background:var(--gold); color:var(--deep); font-weight:700; }
+    .turn-phone { display:none; text-align:center; color:var(--gold); padding:8px; font-size:14px; }
+    @media (orientation: portrait) {
+      .turn-phone { display:block; }
+    }
+    body.practice-on main { max-width:1100px; padding:8px 8px 80px; }
+    @media (orientation: landscape) {
+      body.practice-on header { padding:4px 12px; padding-top:max(4px, env(safe-area-inset-top)); }
+      body.practice-on nav button { padding:8px 0; font-size:10px; }
+      body.practice-on .prac-head { display:flex; gap:8px; align-items:stretch; margin-bottom:6px; }
+      body.practice-on .prac-head .stat { flex:1; padding:6px 10px; }
+      body.practice-on .prac-head .stat b { font-size:18px; }
+      body.practice-on .chipsel { margin:0; flex:2; }
+      body.practice-on .btn { height:44px; margin:0; font-size:15px; }
+    }
+    .craps-table {
+      display:grid;
+      grid-template-columns: 70px minmax(0,1fr) 92px;
+      grid-template-rows: 52px 44px 56px 36px 48px;
+      background:
+        radial-gradient(ellipse at 50% 40%, #147a54 0%, #0a4a36 70%);
+      border: 5px solid #c9a227;
+      border-radius: 28px 28px 16px 16px;
+      overflow: hidden;
+      min-height: 250px;
+      box-shadow: inset 0 0 40px rgba(0,0,0,.35);
+    }
+    @media (orientation: landscape) {
+      .craps-table { grid-template-rows: minmax(48px,1fr) minmax(40px,0.8fr) minmax(52px,1fr) 32px minmax(44px,0.9fr); min-height: calc(100dvh - 150px); }
+    }
+    .tcell {
+      display:flex; flex-direction:column; align-items:center; justify-content:center;
+      border: 1.5px solid #f0e08a; background: transparent; color: #f5eec0;
+      font-size: 10px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+      padding: 2px; margin: 0; width: 100%; height: 100%; position: relative;
+    }
+    .tcell.has { background: rgba(201,162,39,.18); }
+    .tchip {
+      display:inline-block; min-width: 22px; padding: 1px 6px; margin-top: 2px;
+      border-radius: 99px; background: #c23b2e; border: 2px solid #f4d76a;
+      color: #fff; font-size: 11px; letter-spacing: 0;
+    }
+    .puck {
+      position:absolute; top: 3px; right: 4px; width: 16px; height: 16px; border-radius: 50%;
+      background: #fff; color: #111; font-size: 8px; line-height: 16px; text-align:center; letter-spacing: 0;
+      box-shadow: 0 0 0 2px #111;
+    }
+    .puck.off { background: #111; color: #fff; box-shadow: 0 0 0 2px #fff; }
+    .nums { display:grid; grid-template-columns: repeat(6,1fr); height:100%; }
+    .nums .tcell, .props .tcell { min-height: 0; }
+    .dc-col { writing-mode: vertical-rl; transform: rotate(180deg); font-size: 11px; letter-spacing: .2em; height:100%; }
+    .props { display:grid; grid-template-columns: 1fr 1fr; border-left: 2px solid #f0e08a; height:100%; }
+    .pass-line { letter-spacing: .35em; font-size: 13px; border-top: 3px solid #f0e08a; }
+    .dont-bar { letter-spacing: .15em; font-size: 10px; }
+    .come-cell { letter-spacing: .4em; font-size: 16px; }
+    .field-cell { letter-spacing: .25em; font-size: 13px; }
+    .field-pay { font-size: 8px; letter-spacing: 0; font-weight: 400; opacity: .85; text-transform: none; }
+    .cmp { display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid rgba(201,162,39,.12); font-size:14px; }
+    .cmp:last-child { border-bottom:0; }
+    .grid36 { display:grid; grid-template-columns:repeat(7,1fr); gap:3px; text-align:center; font-size:11px; }
+    .grid36 div { background:rgba(0,0,0,.3); border-radius:6px; min-height:28px; display:flex; align-items:center; justify-content:center; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="mark">CRAPS <span class="ver" id="ver">v10</span></div>
+    <div class="muted" id="sub">Phone table</div>
+  </header>
+  <main id="app"></main>
+  <nav>
+    <button type="button" data-tab="table">Table</button>
+    <button type="button" data-tab="stats">Stats</button>
+    <button type="button" data-tab="history">History</button>
+    <button type="button" data-tab="rules">Rules</button>
+    <button type="button" data-tab="practice">Practice</button>
+  </nav>
+  <script>
+(function () {
+  var KEY = "craps.phone.v5";
+  var MAX = 200;
+  var tab = "table";
+  var leftDie = null;
+  var state = load();
+
+  function load() {
+    try { return JSON.parse(localStorage.getItem(KEY)) || { sessions: [], activeId: null, practice: [] }; }
+    catch (e) { return { sessions: [], activeId: null, practice: [] }; }
+  }
+  function save() {
+    try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {}
+  }
+  function active() {
+    if (!state.activeId) return null;
+    for (var i = 0; i < state.sessions.length; i++) {
+      if (state.sessions[i].id === state.activeId && !state.sessions[i].endedAt) return state.sessions[i];
+    }
+    return null;
+  }
+  function uid() { return "s" + Date.now(); }
+  function money(n, signed) {
+    var s = n < 0 ? "-" : (signed && n > 0 ? "+" : "");
+    return s + "$" + Math.abs(Math.round(n));
+  }
+  function pct(n) { return (n * 100).toFixed(1) + "%"; }
+  function trueDie() {
+    var buf = new Uint32Array(1);
+    if (window.crypto && crypto.getRandomValues) {
+      for (;;) {
+        crypto.getRandomValues(buf);
+        var v = buf[0] >>> 0;
+        var max = Math.floor(4294967296 / 6) * 6;
+        if (v < max) return (v % 6) + 1;
+      }
+    }
+    return 1 + Math.floor(Math.random() * 6);
+  }
+
+  var EXPECTED = {2:1/36,3:2/36,4:3/36,5:4/36,6:5/36,7:6/36,8:5/36,9:4/36,10:3/36,11:2/36,12:1/36};
+
+  function seedBets(id, min) {
+    var b = { pass:0, passOdds:0, dont:0, dontOdds:0, place:{}, field:0 };
+    var p68 = Math.max(6, Math.ceil(min / 6) * 6);
+    var p5 = Math.max(5, Math.ceil(min / 5) * 5);
+    if (id === "pass-odds") b.pass = min;
+    if (id === "dont-pass") b.dont = min;
+    if (id === "place-68") { b.place[6] = p68; b.place[8] = p68; }
+    if (id === "iron-cross") { b.place[5] = p5; b.place[6] = p68; b.place[8] = p68; b.field = min; }
+    return b;
+  }
+  function applyPuck(puck, total) {
+    if (!puck.on) {
+      if (total === 7 || total === 11) return { puck: puck, sevenOut:false, pointMade:false, natural:true, craps:false };
+      if (total === 2 || total === 3 || total === 12) return { puck: puck, sevenOut:false, pointMade:false, natural:false, craps:true };
+      return { puck: { on:true, point: total }, sevenOut:false, pointMade:false, natural:false, craps:false };
+    }
+    if (total === 7) return { puck: { on:false }, sevenOut:true, pointMade:false, natural:false, craps:false };
+    if (total === puck.point) return { puck: { on:false }, sevenOut:false, pointMade:true, natural:false, craps:false };
+    return { puck: puck, sevenOut:false, pointMade:false, natural:false, craps:false };
+  }
+  function placePays(box, amt) {
+    if (box === 4 || box === 10) return amt * 9 / 5;
+    if (box === 5 || box === 9) return amt * 7 / 5;
+    return amt * 7 / 6;
+  }
+  function oddsMult(point) {
+    if (point === 4 || point === 10) return 3;
+    if (point === 5 || point === 9) return 4;
+    return 5;
+  }
+  function passOddsPays(point, amt) {
+    if (point === 4 || point === 10) return amt * 2;
+    if (point === 5 || point === 9) return amt * 3 / 2;
+    return amt * 6 / 5;
+  }
+  function dontOddsPays(point, amt) {
+    if (point === 4 || point === 10) return amt / 2;
+    if (point === 5 || point === 9) return amt * 2 / 3;
+    return amt * 5 / 6;
+  }
+  function fieldPays(total, amt, table) {
+    if (total === 2) return amt * table.fieldTwo;
+    if (total === 12) return amt * table.fieldTwelve;
+    if (total === 3 || total === 4 || total === 9 || total === 10 || total === 11) return amt;
+    return 0;
+  }
+  function settle(s, roll) {
+    var call = applyPuck(s.puck, roll.total);
+    var bets = JSON.parse(JSON.stringify(s.bets));
+    var delta = 0;
+    if (bets.field) {
+      var fw = fieldPays(roll.total, bets.field, s.table);
+      if (fw) delta += fw;
+      else if (roll.total === 5 || roll.total === 6 || roll.total === 7 || roll.total === 8) delta -= bets.field;
+    }
+    if (!s.puck.on) {
+      if (call.natural) { delta += bets.pass; delta -= bets.dont; }
+      else if (call.craps) {
+        delta -= bets.pass;
+        if (roll.total !== 12) delta += bets.dont;
+      } else if (call.puck.on) {
+        var m = oddsMult(call.puck.point);
+        if (bets.pass && !bets.passOdds) bets.passOdds = bets.pass * m;
+        if (bets.dont && !bets.dontOdds) bets.dontOdds = bets.dont * m;
+      }
+      return { bets: bets, delta: delta, call: call };
+    }
+    var point = s.puck.point;
+    if (call.pointMade) {
+      delta += bets.pass + passOddsPays(point, bets.passOdds) - bets.dont - bets.dontOdds;
+      bets.passOdds = 0; bets.dontOdds = 0;
+      if (bets.place[point]) delta += placePays(point, bets.place[point]);
+    } else if (call.sevenOut) {
+      delta -= bets.pass + bets.passOdds;
+      delta += bets.dont + dontOddsPays(point, bets.dontOdds);
+      bets.passOdds = 0; bets.dontOdds = 0;
+      for (var k in bets.place) delta -= bets.place[k] || 0;
+      bets.place = {};
+    } else {
+      var box = roll.total;
+      if (bets.place[box]) delta += placePays(box, bets.place[box]);
+    }
+    return { bets: bets, delta: delta, call: call };
+  }
+
+  function addRoll(s, roll, quiet) {
+    if (s.rolls.length >= MAX) return;
+    roll.shooter = s.shooter;
+    roll.at = roll.at || Date.now();
+    var r = settle(s, roll);
+    s.rolls.push(roll);
+    s.bets = r.bets;
+    s.pnl += r.delta;
+    s.shooterPnl += r.delta;
+    s.bankroll = s.buyIn + s.pnl;
+    s.puck = r.call.puck;
+    if (r.call.sevenOut) {
+      s.lastShooter = s.shooter;
+      s.lastShooterPnl = s.shooterPnl;
+      s.shooter += 1;
+      s.shooterPnl = 0;
+      var seed = seedBets(s.strategyId, s.table.min);
+      s.bets.place = seed.place;
+      s.bets.field = seed.field;
+      if (s.strategyId === "pass-odds") s.bets.pass = s.table.min;
+      if (s.strategyId === "dont-pass") s.bets.dont = s.table.min;
+    }
+    if (!quiet) {
+      if (!s.goalHitAt && s.winGoal && s.winGoal.kind === "dollars" && s.pnl >= s.winGoal.value) {
+        s.goalHitAt = Date.now();
+        if (navigator.vibrate) navigator.vibrate([90, 50, 90]);
+        alert("Goal hit — walk.");
+      }
+      if (!s.lossHitAt && s.lossLimit && s.lossLimit.kind === "dollars" && s.pnl <= -Math.abs(s.lossLimit.value)) {
+        s.lossHitAt = Date.now();
+        if (navigator.vibrate) navigator.vibrate([90, 50, 90]);
+        alert("Loss limit — walk.");
+      }
+      save();
+    }
+  }
+
+  function simulate(rolls, strategyId, table, startPuck, buyIn) {
+    var min = (table && table.min) || 10;
+    var s = {
+      strategyId: strategyId,
+      table: table || { min: min, fieldTwo: 2, fieldTwelve: 3 },
+      puck: startPuck && startPuck.on ? { on: true, point: startPuck.point } : { on: false },
+      bets: seedBets(strategyId, min),
+      rolls: [],
+      shooter: 1,
+      pnl: 0,
+      shooterPnl: 0,
+      buyIn: buyIn || 0,
+      bankroll: buyIn || 0,
+      winGoal: null,
+      lossLimit: null
+    };
+    for (var i = 0; i < rolls.length; i++) {
+      addRoll(s, { a: rolls[i].a, b: rolls[i].b, total: rolls[i].total }, true);
+    }
+    return s;
+  }
+
+  function stratName(id) {
+    for (var i = 0; i < STRATS.length; i++) if (STRATS[i][0] === id) return STRATS[i][1];
+    return id;
+  }
+
+  function compareBlock(s) {
+    if (!s.rolls || !s.rolls.length) return "";
+    var html = "<div class='card'><p class='muted'>Same dice, other strategies</p>";
+    for (var i = 0; i < STRATS.length; i++) {
+      var id = STRATS[i][0];
+      var sim = simulate(s.rolls, id, s.table, s.startPuck, s.buyIn);
+      var real = id === s.strategyId;
+      html += "<div class='cmp'><span>" + STRATS[i][1] + (real ? " <span class='gold'>REAL</span>" : "") + "</span><b class='" + (sim.pnl >= 0 ? "win" : "loss") + "'>" + money(sim.pnl, true) + "</b></div>";
+    }
+    html += "</div>";
+    return html;
+  }
+
+  function goalLine(s) {
+    var bits = [];
+    if (s.winGoal) bits.push(s.goalHitAt ? "Hit win goal " + money(s.winGoal.value) : "Win goal " + money(s.winGoal.value) + " not hit");
+    if (s.lossLimit) bits.push(s.lossHitAt ? "Hit loss limit " + money(s.lossLimit.value) : "Loss limit " + money(s.lossLimit.value) + " not hit");
+    return bits.length ? bits.join(" · ") : "";
+  }
+
+  var STRATS = [
+    ["track", "Track only", "Log rolls and stats. No auto bets."],
+    ["pass-odds", "Pass + odds", "Pass at table min, 3-4-5x odds."],
+    ["place-68", "Place 6 & 8", "Place 6 and 8 and collect."],
+    ["iron-cross", "Iron Cross", "Place 5, 6, 8 plus a field bet."],
+    ["dont-pass", "Don't Pass + odds", "Don't Pass at min, lay odds."]
+  ];
+  var RULES = [
+    ["Set your win goal", "Set it per session and per day before you buy in."],
+    ["Be disciplined", "Once you hit your goal, you leave."],
+    ["Study many strategies", "Look at a minimum of 10 and see which you actually like."],
+    ["Make 2–4 of your own", "Build them from your preferences and your goals."],
+    ["Test them first", "Bubble craps, app games, watching and tracking at a casino, rolling at home."],
+    ["Keep what works", "Repeat 3–6 if you need to."],
+    ["Know your table", "Payouts, mins, max, odds, vigs."],
+    ["Bankroll for the worst night", "Size it so you can still come back."],
+    ["Bet blind at your own risk", "Watch a shooter before you bet them."],
+    ["Skip first-time shooters", "Wait. Their second turn is fine."],
+    ["Do not drink", "If you drink, you are gambling. Only gamble with profits."],
+    ["Money management first", "Stay on the strategy. Watch total money and money on the table."]
+  ];
+
+  function val(id) { var el = document.getElementById(id); return el ? el.value : ""; }
+  function num(id) { return Number(val(id)); }
+
+  function buyInView() {
+    var html = "<h1>Buy in</h1><p class='muted'>This page does not need the React app. Start session works here.</p>";
+    html += "<label>Casino<input id='casino' value='River Spirit / Tulsa'></label>";
+    html += "<div class='row'><label>Buy-in $<input id='buyIn' inputmode='numeric' value='300'></label>";
+    html += "<label>Table min $<input id='min' inputmode='numeric' value='10'></label></div>";
+    html += "<div class='row'><label>Win goal $<input id='win' inputmode='numeric' value='200'></label>";
+    html += "<label>Loss limit $<input id='loss' inputmode='numeric' value='150'></label></div>";
+    html += "<p class='muted'>Field: 1x on 3, 4, 9, 10, 11 · 2x on 2 · 3x on 12</p>";
+    html += "<p class='err hidden' id='err'></p>";
+    html += "<button type='button' class='btn' id='startBtn'>Start session</button>";
+    html += "<p class='muted'>Strategy</p>";
+    for (var i = 0; i < STRATS.length; i++) {
+      html += "<button type='button' class='strat" + (STRATS[i][0] === chosenStrat ? " on" : "") + "' data-strat='" + STRATS[i][0] + "'><b>" + STRATS[i][1] + "</b><div class='muted'>" + STRATS[i][2] + "</div></button>";
+    }
+    html += "<div class='card'><b>First roll — puck?</b><div class='row' style='margin-top:8px'><button type='button' class='btn " + (puckOn ? "btn-ghost" : "") + "' id='comeout'>Come out</button><button type='button' class='btn " + (puckOn ? "" : "btn-ghost") + "' id='pointon'>Point on</button></div>";
+    html += "<div id='points' class='" + (puckOn ? "pad" : "hidden pad") + "' style='margin-top:8px'>";
+    [4,5,6,8,9,10].forEach(function (n) { html += "<button type='button' data-point='" + n + "'>" + n + "</button>"; });
+    html += "</div></div>";
+    return html;
+  }
+
+  function lastN(rolls, n) { return rolls.slice(-n); }
+
+  function decorate(rolls, startPuck) {
+    var puck = startPuck && startPuck.on ? { on: true, point: startPuck.point } : { on: false };
+    var out = [];
+    for (var i = 0; i < rolls.length; i++) {
+      var r = rolls[i];
+      var pointBefore = puck.on ? puck.point : 0;
+      var call = applyPuck(puck, r.total);
+      var mark = "";
+      var cls = "";
+      if (call.sevenOut) { mark = "7 OUT"; cls = "out"; }
+      else if (call.pointMade) { mark = "HIT"; cls = "hit"; }
+      else if (call.natural) { mark = "NAT"; cls = "nat"; }
+      else if (call.craps) { mark = "CR"; cls = "craps"; }
+      else if (call.puck.on && !pointBefore) { mark = "ON"; cls = "onset"; }
+      else if (pointBefore) { mark = "P" + pointBefore; cls = "working"; }
+      else if (r.a && r.b) { mark = r.a + "-" + r.b; }
+      if (r.a && r.b && r.a === r.b && (r.total === 4 || r.total === 6 || r.total === 8 || r.total === 10)) {
+        mark = mark ? mark + " H" : "H";
+      }
+      puck = call.puck;
+      out.push({ r: r, mark: mark, cls: cls });
+    }
+    return out;
+  }
+
+  function strip(rolls, n, startPuck, withPuck) {
+    var show;
+    if (withPuck) show = decorate(rolls, startPuck).slice(-n).reverse();
+    else {
+      show = lastN(rolls, n).slice().reverse().map(function (r) {
+        var hard = r.a && r.b && r.a === r.b && (r.total === 4 || r.total === 6 || r.total === 8 || r.total === 10);
+        return { r: r, mark: hard ? "H" : ((r.a && r.b) ? (r.a + "-" + r.b) : ""), cls: r.total === 7 ? "out" : "" };
+      });
+    }
+    if (!show.length) return "<p class='muted'>No rolls yet.</p>";
+    var h = "<div class='strip'>";
+    for (var i = 0; i < show.length; i++) {
+      var t = show[i];
+      h += "<div class='chip " + t.cls + "'>" + t.r.total + (t.mark ? "<span class='mark'>" + t.mark + "</span>" : "") + "</div>";
+    }
+    h += "</div>";
+    if (withPuck) h += "<p class='legend'>Gold ON = point established · Green HIT = point made · Red 7 OUT · NAT = come-out 7/11 · P8 = point is 8 · H = hard 4/6/8/10</p>";
+    return h;
+  }
+  function glance(rolls, n) {
+    var slice = lastN(rolls, n);
+    var counts = {};
+    for (var t = 2; t <= 12; t++) counts[t] = 0;
+    for (var i = 0; i < slice.length; i++) counts[slice[i].total]++;
+    var h = "<p class='muted'>Last " + slice.length + " · actual vs true math</p><div class='pcts'>";
+    for (t = 2; t <= 12; t++) {
+      h += "<div class='pct'><b>" + t + "</b><div>" + (slice.length ? pct(counts[t] / slice.length) : "—") + "</div><div class='muted'>" + pct(EXPECTED[t]) + "</div></div>";
+    }
+    return h + "</div>";
+  }
+
+  function liveView(s) {
+    var last = s.rolls[s.rolls.length - 1];
+    var html = "";
+    html += "<div style='display:flex;justify-content:space-between'><div><div class='muted'>" + (s.puck.on ? "Puck on" : "Puck off") + "</div>";
+    html += "<div class='gold' style='font-size:32px;font-weight:700'>" + (s.puck.on ? "POINT " + s.puck.point : "COME OUT") + "</div>";
+    html += "<div class='muted'>Shooter " + s.shooter + " · " + s.rolls.length + "/200</div></div>";
+    var lastTag = last ? decorate(s.rolls, s.startPuck).pop() : null;
+    html += "<div style='text-align:right'><div class='muted'>Last roll</div><div style='font-size:32px;font-weight:700' class='" + (lastTag && lastTag.cls === "out" ? "loss" : lastTag && (lastTag.cls === "hit" || lastTag.cls === "nat") ? "win" : "") + "'>" + (last ? last.total : "—") + "</div>";
+    html += "<div class='muted'>" + (lastTag && lastTag.mark ? lastTag.mark : (last && last.a ? last.a + "-" + last.b : "")) + "</div></div></div>";
+    html += "<div class='stats'><div class='stat'>Bankroll<b>" + money(s.bankroll) + "</b></div>";
+    html += "<div class='stat'>Session<b class='" + (s.pnl >= 0 ? "win" : "loss") + "'>" + money(s.pnl, true) + "</b></div>";
+    var shooterHasRolls = false;
+    for (var si = 0; si < s.rolls.length; si++) if (s.rolls[si].shooter === s.shooter) shooterHasRolls = true;
+    var showShooterPnl = shooterHasRolls || !s.lastShooter ? s.shooterPnl : s.lastShooterPnl;
+    var showShooterLabel = shooterHasRolls || !s.lastShooter ? "This shooter" : ("Shooter " + s.lastShooter + " 7-out");
+    html += "<div class='stat'>" + showShooterLabel + "<b class='" + (showShooterPnl >= 0 ? "win" : "loss") + "'>" + money(showShooterPnl, true) + "</b></div>";
+    html += "<div class='stat'>Strategy<b style='font-size:14px'>" + s.strategyLabel + "</b></div></div>";
+    html += "<p class='muted'>Win " + (s.winGoal ? money(s.winGoal.value) : "—") + " · Loss " + (s.lossLimit ? money(s.lossLimit.value) : "—") + (goalLine(s) ? " · " + goalLine(s) : "") + "</p>";
+    html += compareBlock(s);
+    html += "<p class='muted'>Field: 1x on 3/4/9/10/11 · " + s.table.fieldTwo + "x on 2 · " + s.table.fieldTwelve + "x on 12</p>";
+    html += "<p class='muted'>Last 21</p>" + strip(s.rolls, 21, s.startPuck, true);
+    html += glance(s.rolls, 90);
+    html += "<p class='muted' id='dieHint'>" + (leftDie ? ("Die 1 is " + leftDie + " — tap die 2") : "Tap two dice, or a total") + "</p>";
+    html += "<div class='pad' id='dice'>";
+    for (var d = 1; d <= 6; d++) html += "<button type='button' data-die='" + d + "'" + (leftDie === d ? " class='sel'" : "") + ">" + d + "</button>";
+    html += "</div><div class='totals'>";
+    for (var t = 2; t <= 7; t++) html += "<button type='button' data-total='" + t + "'" + (t === 7 ? " class='seven'" : "") + ">" + t + "</button>";
+    html += "</div><div class='totals' style='grid-template-columns:repeat(5,1fr)'>";
+    for (t = 8; t <= 12; t++) html += "<button type='button' data-total='" + t + "'>" + t + "</button>";
+    html += "</div><div class='row'><button type='button' class='btn btn-ghost' id='undo'>Undo</button>";
+    html += "<button type='button' class='btn btn-danger' id='end'>End</button></div>";
+    html += "<div class='card'><p class='muted'>Missed a call? Set the puck.</p><div class='row'><button type='button' class='btn btn-ghost' id='setCome'>Come out</button><button type='button' class='btn btn-ghost' id='setPoint'>Point on</button></div>";
+    if (s.puck.on) {
+      html += "<div class='pad' style='margin-top:8px'>";
+      [4,5,6,8,9,10].forEach(function (n) {
+        html += "<button type='button' data-setpoint='" + n + "'" + (s.puck.point === n ? " class='sel'" : "") + ">" + n + "</button>";
+      });
+      html += "</div>";
+    }
+    html += "</div>";
+    return html;
+  }
+
+  function statsView(s) {
+    if (!s || !s.rolls.length) return "<p class='muted'>Log a few rolls first.</p>";
+    var counts = {}, groups = {"2/12":[2,12],"3/11":[3,11],"4/10":[4,10],"5/9":[5,9],"6/8":[6,8],"7":[7]};
+    for (var t = 2; t <= 12; t++) counts[t] = 0;
+    var sevens = 0, points = 0, puck = { on:false };
+    var hard = {4:{h:0,e:0},6:{h:0,e:0},8:{h:0,e:0},10:{h:0,e:0}};
+    var faces = [[0,0,0,0,0,0],[0,0,0,0,0,0],[0,0,0,0,0,0],[0,0,0,0,0,0],[0,0,0,0,0,0],[0,0,0,0,0,0]];
+    var known = 0, byShooter = {}, streakN = 0, streakT = 0, maxStreak = {};
+    for (var i = 0; i < s.rolls.length; i++) {
+      var r = s.rolls[i];
+      counts[r.total]++;
+      byShooter[r.shooter] = (byShooter[r.shooter] || 0) + 1;
+      if (r.total === streakT) streakN++; else { streakT = r.total; streakN = 1; }
+      if (streakN >= 2 && streakN > (maxStreak[r.total] || 0)) maxStreak[r.total] = streakN;
+      var c = applyPuck(puck, r.total);
+      if (c.sevenOut) sevens++;
+      if (c.pointMade) points++;
+      puck = c.puck;
+      if (r.a && r.b) {
+        known++;
+        faces[r.a - 1][r.b - 1]++;
+        if (r.total === 4 || r.total === 6 || r.total === 8 || r.total === 10) {
+          if (r.a === r.b) hard[r.total].h++;
+          else hard[r.total].e++;
+        }
+      }
+    }
+    var shooters = Object.keys(byShooter);
+    var avg = shooters.length ? (s.rolls.length / shooters.length).toFixed(1) : "—";
+    var html = "<h1>Stats</h1><p class='muted'>" + s.rolls.length + " rolls · " + sevens + " seven-outs · " + points + " points made · " + avg + " rolls/shooter</p>";
+    html += glance(s.rolls, 90);
+    html += "<p class='muted'>Last 21</p>" + strip(s.rolls, 21, s.startPuck, true);
+    html += "<h3>Grouped pairs</h3>";
+    for (var k in groups) {
+      var tot = 0, exp = 0;
+      groups[k].forEach(function (n) { tot += counts[n]; exp += EXPECTED[n]; });
+      html += "<div class='card'>" + k + " · " + tot + " · " + pct(tot / s.rolls.length) + " <span class='muted'>(" + pct(exp) + ")</span></div>";
+    }
+    html += "<h3>Hard vs easy</h3><div class='stats'>";
+    [4,6,8,10].forEach(function (n) {
+      html += "<div class='stat'>" + n + "<b style='font-size:16px'>H " + hard[n].h + " · E " + hard[n].e + "</b></div>";
+    });
+    html += "</div>";
+    html += "<h3>36 faces</h3><p class='muted'>" + known + " rolls with a known pair. Totals-only taps are left off this grid.</p><div class='grid36'><div></div>";
+    for (var n = 1; n <= 6; n++) html += "<div class='muted'>" + n + "</div>";
+    for (var a = 0; a < 6; a++) {
+      html += "<div class='muted'>" + (a + 1) + "</div>";
+      for (var b = 0; b < 6; b++) html += "<div>" + (faces[a][b] || "") + "</div>";
+    }
+    html += "</div>";
+    var reps = [];
+    for (k in maxStreak) reps.push({ t: Number(k), n: maxStreak[k] });
+    reps.sort(function (x, y) { return y.n - x.n; });
+    if (reps.length) {
+      html += "<h3>Repeaters</h3><div class='card'>";
+      reps.forEach(function (x) { html += "<span style='display:inline-block;margin:4px 8px 4px 0'>" + x.t + " × " + x.n + "</span>"; });
+      html += "</div>";
+    }
+    return html;
+  }
+
+  function historyView() {
+    if (histId) {
+      var s = null;
+      for (var i = 0; i < state.sessions.length; i++) if (state.sessions[i].id === histId) s = state.sessions[i];
+      if (!s) { histId = null; }
+      else return historyDetail(s);
+    }
+    if (!state.sessions.length) return "<h1>History</h1><p class='muted'>Finished sessions land here. Tap one to replay other strategies on those exact rolls.</p>";
+    var html = "<h1>History</h1><p class='muted'>Tap a session to replay it on other strategies.</p>";
+    state.sessions.forEach(function (s) {
+      html += "<button type='button' class='strat' data-hist='" + s.id + "'><b>" + (s.casino || "Table") + "</b> <span class='" + (s.pnl >= 0 ? "win" : "loss") + "'>" + money(s.pnl, true) + "</span>";
+      html += "<div class='muted'>" + new Date(s.startedAt).toLocaleString() + " · " + s.rolls.length + " rolls · " + (s.strategyLabel || stratName(s.strategyId)) + (s.endedAt ? "" : " · OPEN") + "</div>";
+      var g = goalLine(s);
+      if (g) html += "<div class='muted'>" + g + "</div>";
+      html += "</button>";
+    });
+    return html;
+  }
+
+  function historyDetail(s) {
+    var html = "<button type='button' class='btn btn-ghost' id='histBack'>Back to list</button>";
+    html += "<h1>" + (s.casino || "Table") + "</h1>";
+    html += "<p class='muted'>" + new Date(s.startedAt).toLocaleString() + (s.endedAt ? " → " + new Date(s.endedAt).toLocaleString() : " · still open") + "</p>";
+    html += "<div class='stats'><div class='stat'>Real P/L<b class='" + (s.pnl >= 0 ? "win" : "loss") + "'>" + money(s.pnl, true) + "</b></div>";
+    html += "<div class='stat'>Buy-in<b>" + money(s.buyIn) + "</b></div></div>";
+    var g = goalLine(s);
+    if (g) html += "<p class='muted'>" + g + "</p>";
+    html += "<p class='muted'>Played: " + (s.strategyLabel || stratName(s.strategyId)) + " · " + s.rolls.length + " rolls</p>";
+    html += strip(s.rolls, 21, s.startPuck, true);
+    html += compareBlock(s);
+    html += glance(s.rolls, 90);
+    if (!s.endedAt) html += "<button type='button' class='btn' id='histResume'>Resume this session</button>";
+    return html;
+  }
+
+  function rulesView() {
+    var html = "<h1>Craps rules</h1><p class='muted'>Discipline rules, not a betting system.</p>";
+    RULES.forEach(function (r, i) {
+      html += "<div class='card'><div class='gold'>Rule " + (i + 1) + "</div><b>" + r[0] + "</b><p class='muted'>" + r[1] + "</p></div>";
+    });
+    return html;
+  }
+
+  function emptyPracBets() {
+    return {
+      pass:0, dont:0, passOdds:0, dontOdds:0,
+      come:0, comePt:0, comeOdds:0,
+      dc:0, dcPt:0, dcOdds:0,
+      place:{4:0,5:0,6:0,8:0,9:0,10:0},
+      field:0, hard:{4:0,6:0,8:0,10:0},
+      any7:0, anyCraps:0, yo:0, two:0, three:0, twelve:0, horn:0
+    };
+  }
+  function defaultPrac() {
+    return { bank: 300, buyIn: 300, chip: 5, take: false, puck: { on: false }, bets: emptyPracBets(), rolls: [], last: null, lastDelta: 0, msg: "" };
+  }
+  function prac() {
+    if (!state.prac) state.prac = defaultPrac();
+    if (!state.prac.bets) state.prac.bets = emptyPracBets();
+    return state.prac;
+  }
+  function spotAmt(b, spot) {
+    if (spot === "place4") return b.place[4] || 0;
+    if (spot === "place5") return b.place[5] || 0;
+    if (spot === "place6") return b.place[6] || 0;
+    if (spot === "place8") return b.place[8] || 0;
+    if (spot === "place9") return b.place[9] || 0;
+    if (spot === "place10") return b.place[10] || 0;
+    if (spot === "hard4") return b.hard[4] || 0;
+    if (spot === "hard6") return b.hard[6] || 0;
+    if (spot === "hard8") return b.hard[8] || 0;
+    if (spot === "hard10") return b.hard[10] || 0;
+    return b[spot] || 0;
+  }
+  function addToSpot(b, spot, n) {
+    if (spot.indexOf("place") === 0) { var p = Number(spot.replace("place","")); b.place[p] = (b.place[p] || 0) + n; }
+    else if (spot.indexOf("hard") === 0) { var h = Number(spot.replace("hard","")); b.hard[h] = (b.hard[h] || 0) + n; }
+    else b[spot] = (b[spot] || 0) + n;
+  }
+  function pay(p, n) { p.bank += n; p.lastDelta += n; }
+  function loseBet(p, key, sub) {
+    if (sub) { p.lastDelta -= p.bets[key][sub] || 0; p.bets[key][sub] = 0; }
+    else { p.lastDelta -= p.bets[key] || 0; p.bets[key] = 0; }
+  }
+
+  function pracSettle(p, a, b, t) {
+    p.lastDelta = 0;
+    var bets = p.bets;
+    var puck = p.puck;
+    var hardHit = a === b && (t === 4 || t === 6 || t === 8 || t === 10);
+
+    if (bets.any7) { if (t === 7) pay(p, bets.any7 * 5); loseBet(p, "any7"); }
+    if (bets.anyCraps) { if (t === 2 || t === 3 || t === 12) pay(p, bets.anyCraps * 8); loseBet(p, "anyCraps"); }
+    if (bets.yo) { if (t === 11) pay(p, bets.yo * 16); loseBet(p, "yo"); }
+    if (bets.two) { if (t === 2) pay(p, bets.two * 31); loseBet(p, "two"); }
+    if (bets.three) { if (t === 3) pay(p, bets.three * 16); loseBet(p, "three"); }
+    if (bets.twelve) { if (t === 12) pay(p, bets.twelve * 31); loseBet(p, "twelve"); }
+    if (bets.horn) {
+      var u = bets.horn / 4;
+      if (t === 2 || t === 12) pay(p, u * 31);
+      else if (t === 3 || t === 11) pay(p, u * 16);
+      loseBet(p, "horn");
+    }
+    if (bets.field) {
+      var fp = fieldPays(t, bets.field, { fieldTwo: 2, fieldTwelve: 3 });
+      if (fp) pay(p, bets.field + fp);
+      loseBet(p, "field");
+    }
+    [4,6,8,10].forEach(function (n) {
+      if (!bets.hard[n]) return;
+      if (t === 7 || (t === n && !hardHit)) loseBet(p, "hard", n);
+      else if (t === n && hardHit) pay(p, bets.hard[n] * (n === 4 || n === 10 ? 8 : 10));
+    });
+
+    if (!puck.on) {
+      if (t === 7 || t === 11) { if (bets.pass) pay(p, bets.pass * 2); if (bets.dont) loseBet(p, "dont"); }
+      else if (t === 2 || t === 3) { if (bets.pass) loseBet(p, "pass"); if (bets.dont) pay(p, bets.dont * 2); }
+      else if (t === 12) { if (bets.pass) loseBet(p, "pass"); }
+      else { p.puck = { on: true, point: t }; }
+    } else {
+      var point = puck.point;
+      if (t === 7) {
+        if (bets.come && !bets.comePt) pay(p, bets.come * 2), bets.come = 0;
+        else if (bets.comePt) {
+          p.lastDelta -= (bets.comeAmt || 0) + (bets.comeOdds || 0);
+          bets.comePt = 0; bets.comeAmt = 0; bets.comeOdds = 0;
+        }
+        if (bets.dc && !bets.dcPt) loseBet(p, "dc");
+        else if (bets.dcPt) {
+          pay(p, (bets.dcAmt || 0) * 2);
+          if (bets.dcOdds) pay(p, bets.dcOdds + dontOddsPays(bets.dcPt, bets.dcOdds));
+          bets.dcPt = 0; bets.dcAmt = 0; bets.dcOdds = 0;
+        }
+        if (bets.pass) loseBet(p, "pass");
+        if (bets.passOdds) loseBet(p, "passOdds");
+        if (bets.dont) pay(p, bets.dont * 2);
+        if (bets.dontOdds) pay(p, bets.dontOdds + dontOddsPays(point, bets.dontOdds));
+        [4,5,6,8,9,10].forEach(function (n) { if (bets.place[n]) loseBet(p, "place", n); });
+        p.puck = { on: false };
+      } else if (t === point) {
+        if (bets.pass) pay(p, bets.pass * 2);
+        if (bets.passOdds) pay(p, bets.passOdds + passOddsPays(point, bets.passOdds));
+        if (bets.dont) loseBet(p, "dont");
+        if (bets.dontOdds) loseBet(p, "dontOdds");
+        bets.passOdds = 0;
+        if (bets.place[t]) pay(p, placePays(t, bets.place[t]));
+        p.puck = { on: false };
+      } else {
+        if (bets.place[t]) pay(p, placePays(t, bets.place[t]));
+        if (bets.come && !bets.comePt) {
+          if (t === 11) pay(p, bets.come * 2), bets.come = 0;
+          else if (t === 2 || t === 3 || t === 12) loseBet(p, "come");
+          else { bets.comeAmt = bets.come; bets.comePt = t; bets.come = 0; }
+        } else if (bets.comePt && t === bets.comePt) {
+          pay(p, (bets.comeAmt || 0) * 2);
+          if (bets.comeOdds) pay(p, bets.comeOdds + passOddsPays(bets.comePt, bets.comeOdds));
+          bets.comePt = 0; bets.comeAmt = 0; bets.comeOdds = 0;
+        }
+        if (bets.dc && !bets.dcPt) {
+          if (t === 11) loseBet(p, "dc");
+          else if (t === 2 || t === 3) pay(p, bets.dc * 2), bets.dc = 0;
+          else if (t !== 12) { bets.dcAmt = bets.dc; bets.dcPt = t; bets.dc = 0; }
+        } else if (bets.dcPt && t === bets.dcPt) {
+          p.lastDelta -= (bets.dcAmt || 0) + (bets.dcOdds || 0);
+          bets.dcPt = 0; bets.dcAmt = 0; bets.dcOdds = 0;
+        }
+      }
+    }
+  }
+
+  function tcell(spot, label, cls) {
+    var p = prac();
+    var amt = spotAmt(p.bets, spot);
+    var n = Number(String(spot).replace("place",""));
+    var puckHtml = "";
+    if (spot.indexOf("place") === 0 && p.puck.on && p.puck.point === n) {
+      puckHtml = "<span class='puck'>ON</span>";
+    } else if (spot.indexOf("place") === 0 && !p.puck.on && (n === 4 || n === 5 || n === 6 || n === 8 || n === 9 || n === 10)) {
+      puckHtml = "<span class='puck off'>OFF</span>";
+    }
+    var extra = "";
+    if (spot === "come" && p.bets.comePt) extra = "<span class='field-pay'>Pt " + p.bets.comePt + (p.bets.comeAmt ? " $" + p.bets.comeAmt : "") + "</span>";
+    return "<button type='button' class='tcell " + (cls || "") + (amt ? " has" : "") + "' data-spot='" + spot + "'>" + puckHtml + "<span class='tlab'>" + label + "</span>" + extra + (amt ? "<span class='tchip'>$" + Math.round(amt) + "</span>" : "") + "</button>";
+  }
+
+  function practiceView() {
+    var p = prac();
+    var last = p.last;
+    var html = "<p class='turn-phone'>Turn the phone sideways for the real table.</p>";
+    html += "<div class='prac-head'>";
+    html += "<div class='stat'>Bank<b>" + money(p.bank) + "</b></div>";
+    html += "<div class='stat'>" + (p.puck.on ? "Point " + p.puck.point : "Come out") + "<b class='" + (p.lastDelta >= 0 ? "win" : "loss") + "'>" + (last ? last.a + "-" + last.b + " = " + last.total : "—") + "</b></div>";
+    html += "<div class='chipsel'>";
+    [1,5,25,100].forEach(function (c) {
+      html += "<button type='button' data-chip='" + c + "' class='" + (p.chip === c ? "on" : "") + "'>$" + c + "</button>";
+    });
+    html += "</div>";
+    html += "<button type='button' class='btn " + (p.take ? "" : "btn-ghost") + "' id='takeMode'>" + (p.take ? "TAKE" : "Place") + "</button>";
+    html += "<button type='button' class='btn' id='pracRoll'>ROLL</button>";
+    html += "</div>";
+    if (p.msg) html += "<p class='muted' style='margin:4px 0'>" + p.msg + "</p>";
+
+    html += "<div class='craps-table'>";
+    html += "<div style='grid-column:1;grid-row:1/5'>" + tcell("dc", "Don't Come", "dc-col") + "</div>";
+    html += "<div class='nums' style='grid-column:2;grid-row:1'>";
+    html += tcell("place4", "4") + tcell("place5", "5") + tcell("place6", "6") + tcell("place8", "8") + tcell("place9", "9") + tcell("place10", "10");
+    html += "</div>";
+    html += "<div class='props' style='grid-column:3;grid-row:1/6'>";
+    html += tcell("hard4", "Hard 4") + tcell("hard6", "Hard 6") + tcell("hard8", "Hard 8") + tcell("hard10", "Hard 10");
+    html += tcell("any7", "Seven") + tcell("anyCraps", "Any craps") + tcell("yo", "Yo") + tcell("horn", "Horn");
+    html += tcell("two", "2") + tcell("three", "3") + tcell("twelve", "12");
+    html += "</div>";
+    html += "<div style='grid-column:2;grid-row:2'>" + tcell("come", "COME", "come-cell") + "</div>";
+    html += "<div style='grid-column:2;grid-row:3'>" + tcell("field", "FIELD<br><span class='field-pay'>2 pays 2x · 12 pays 3x · 3 4 9 10 11 even</span>", "field-cell") + "</div>";
+    html += "<div style='grid-column:2;grid-row:4;display:grid;grid-template-columns:1.4fr 1fr'>" + tcell("dont", "Don't Pass Bar", "dont-bar") + tcell("dontOdds", "Don't odds") + "</div>";
+    html += "<div style='grid-column:1/3;grid-row:5;display:grid;grid-template-columns:1fr 110px'>" + tcell("pass", "PASS LINE", "pass-line") + tcell("passOdds", "Pass odds") + "</div>";
+    html += "</div>";
+
+    html += "<div class='row' style='margin-top:8px'><button type='button' class='btn btn-ghost' id='pracClear'>Take all down</button><button type='button' class='btn btn-ghost' id='pracReset'>Reset $300</button></div>";
+    html += "<p class='muted'>Last 72</p>" + strip(p.rolls, 72, { on: false }, true);
+    html += glance(p.rolls, 72);
+    html += "<button type='button' class='btn btn-ghost' id='roll72'>Fill 72 no bets</button>";
+    return html;
+  }
+
+  var chosenStrat = "place-68";
+  var puckOn = false;
+  var pointNum = 4;
+  var histId = null;
+
+  function render() {
+    var app = document.getElementById("app");
+    var s = active();
+    document.body.className = tab === "practice" ? "practice-on" : "";
+    document.getElementById("sub").textContent = tab === "practice" ? "Practice table" : (s ? ("Live · " + (s.casino || "table")) : "Phone table");
+    var buttons = document.querySelectorAll("nav button");
+    for (var i = 0; i < buttons.length; i++) buttons[i].className = buttons[i].getAttribute("data-tab") === tab ? "on" : "";
+    if (tab === "table") app.innerHTML = s ? liveView(s) : buyInView();
+    else if (tab === "stats") app.innerHTML = statsView(s || state.sessions[0]);
+    else if (tab === "history") app.innerHTML = historyView();
+    else if (tab === "rules") app.innerHTML = rulesView();
+    else app.innerHTML = practiceView();
+    bind();
+  }
+
+  function bind() {
+    var startBtn = document.getElementById("startBtn");
+    if (startBtn) startBtn.onclick = function () {
+      var buy = num("buyIn");
+      var min = num("min");
+      var err = document.getElementById("err");
+      if (!(buy > 0) || !(min > 0)) { err.textContent = "Enter a buy-in and table min."; err.className = "err"; return; }
+      var session = {
+        id: uid(),
+        casino: val("casino"),
+        startedAt: Date.now(),
+        endedAt: null,
+        buyIn: buy,
+        unit: min,
+        winGoal: { kind: "dollars", value: num("win") },
+        lossLimit: { kind: "dollars", value: num("loss") },
+        table: { min: min, fieldTwo: 2, fieldTwelve: 3 },
+        strategyId: chosenStrat,
+        strategyLabel: (STRATS.filter(function (x) { return x[0] === chosenStrat; })[0] || ["", "Track"])[1],
+        puck: puckOn ? { on: true, point: pointNum } : { on: false },
+        startPuck: puckOn ? { on: true, point: pointNum } : { on: false },
+        rolls: [],
+        shooter: 1,
+        pnl: 0,
+        shooterPnl: 0,
+        bankroll: buy,
+        bets: seedBets(chosenStrat, min),
+        goalHitAt: null,
+        lossHitAt: null
+      };
+      state.sessions.unshift(session);
+      state.activeId = session.id;
+      save();
+      tab = "table";
+      render();
+    };
+    var strats = document.querySelectorAll("[data-strat]");
+    for (var i = 0; i < strats.length; i++) {
+      strats[i].onclick = function () {
+        chosenStrat = this.getAttribute("data-strat");
+        render();
+      };
+    }
+    var come = document.getElementById("comeout");
+    if (come) come.onclick = function () { puckOn = false; render(); };
+    var pon = document.getElementById("pointon");
+    if (pon) pon.onclick = function () { puckOn = true; render(); };
+    var pts = document.querySelectorAll("[data-point]");
+    for (i = 0; i < pts.length; i++) pts[i].onclick = function () { pointNum = Number(this.getAttribute("data-point")); render(); };
+
+    var s = active();
+    var dice = document.querySelectorAll("[data-die]");
+    for (i = 0; i < dice.length; i++) dice[i].onclick = function () {
+      var n = Number(this.getAttribute("data-die"));
+      if (leftDie == null) { leftDie = n; render(); return; }
+      var a = leftDie, b = n;
+      leftDie = null;
+      addRoll(s, { a: a, b: b, total: a + b });
+      render();
+    };
+    var tots = document.querySelectorAll("[data-total]");
+    for (i = 0; i < tots.length; i++) tots[i].onclick = function () {
+      leftDie = null;
+      addRoll(s, { a: null, b: null, total: Number(this.getAttribute("data-total")) });
+      render();
+    };
+    var undo = document.getElementById("undo");
+    if (undo) undo.onclick = function () {
+      if (!s || !s.rolls.length) return;
+      var kept = s.rolls.slice(0, -1);
+      s.rolls = [];
+      s.pnl = 0;
+      s.shooterPnl = 0;
+      s.shooter = 1;
+      s.puck = { on: false };
+      s.bets = seedBets(s.strategyId, s.table.min);
+      s.bankroll = s.buyIn;
+      s.goalHitAt = null;
+      s.lossHitAt = null;
+      s.lastShooter = 0;
+      s.lastShooterPnl = 0;
+      for (var j = 0; j < kept.length; j++) addRoll(s, kept[j]);
+      render();
+    };
+    var end = document.getElementById("end");
+    if (end) end.onclick = function () {
+      if (!s) return;
+      if (!confirm("End this session?")) return;
+      s.endedAt = Date.now();
+      state.activeId = null;
+      save();
+      tab = "history";
+      render();
+    };
+    var setCome = document.getElementById("setCome");
+    if (setCome) setCome.onclick = function () { s.puck = { on: false }; save(); render(); };
+    var setPoint = document.getElementById("setPoint");
+    if (setPoint) setPoint.onclick = function () { s.puck = { on: true, point: s.puck.on ? s.puck.point : 4 }; save(); render(); };
+    var sp = document.querySelectorAll("[data-setpoint]");
+    for (i = 0; i < sp.length; i++) sp[i].onclick = function () { s.puck = { on: true, point: Number(this.getAttribute("data-setpoint")) }; save(); render(); };
+
+    var histCards = document.querySelectorAll("[data-hist]");
+    for (i = 0; i < histCards.length; i++) histCards[i].onclick = function () {
+      histId = this.getAttribute("data-hist");
+      render();
+    };
+    var histBack = document.getElementById("histBack");
+    if (histBack) histBack.onclick = function () { histId = null; render(); };
+    var histResume = document.getElementById("histResume");
+    if (histResume) histResume.onclick = function () {
+      state.activeId = histId;
+      histId = null;
+      save();
+      tab = "table";
+      render();
+    };
+
+    var chipBtns = document.querySelectorAll("[data-chip]");
+    for (i = 0; i < chipBtns.length; i++) chipBtns[i].onclick = function () {
+      prac().chip = Number(this.getAttribute("data-chip"));
+      save(); render();
+    };
+    var takeMode = document.getElementById("takeMode");
+    if (takeMode) takeMode.onclick = function () { prac().take = !prac().take; save(); render(); };
+    var spots = document.querySelectorAll("[data-spot]");
+    for (i = 0; i < spots.length; i++) spots[i].onclick = function () {
+      var p = prac();
+      var spot = this.getAttribute("data-spot");
+      var chip = p.chip;
+      if (spot === "passOdds" && (!p.puck.on || !p.bets.pass)) { p.msg = "Pass odds only with a pass bet and a point."; save(); render(); return; }
+      if (spot === "dontOdds" && (!p.puck.on || !p.bets.dont)) { p.msg = "Don't odds only with a don't pass bet and a point."; save(); render(); return; }
+      if ((spot === "come" || spot === "dc") && !p.puck.on) { p.msg = "Come / Don't Come after a point is on."; save(); render(); return; }
+      if (p.take) {
+        var have = spotAmt(p.bets, spot);
+        var n = Math.min(chip, have);
+        if (!n) return;
+        addToSpot(p.bets, spot, -n);
+        p.bank += n;
+        p.msg = "Took down " + money(n);
+      } else {
+        if (p.bank < chip) { p.msg = "Not enough bank."; save(); render(); return; }
+        p.bank -= chip;
+        addToSpot(p.bets, spot, chip);
+        p.msg = "";
+      }
+      save(); render();
+    };
+    var pracRoll = document.getElementById("pracRoll");
+    if (pracRoll) pracRoll.onclick = function () {
+      var p = prac();
+      var a = trueDie(), b = trueDie(), t = a + b;
+      p.last = { a: a, b: b, total: t };
+      p.rolls = (p.rolls || []).concat([{ a: a, b: b, total: t, at: Date.now() }]).slice(-72);
+      pracSettle(p, a, b, t);
+      p.msg = (p.lastDelta >= 0 ? "This roll " : "This roll ") + money(p.lastDelta, true);
+      save(); render();
+    };
+    var pracClear = document.getElementById("pracClear");
+    if (pracClear) pracClear.onclick = function () {
+      var p = prac();
+      var b = p.bets;
+      var back = b.pass + b.dont + b.passOdds + b.dontOdds + b.come + (b.comeAmt || 0) + b.comeOdds + b.dc + (b.dcAmt || 0) + b.dcOdds + b.field + b.any7 + b.anyCraps + b.yo + b.two + b.three + b.twelve + b.horn;
+      [4,5,6,8,9,10].forEach(function (n) { back += b.place[n] || 0; });
+      [4,6,8,10].forEach(function (n) { back += b.hard[n] || 0; });
+      p.bank += back;
+      p.bets = emptyPracBets();
+      p.msg = "All bets down " + money(back);
+      save(); render();
+    };
+    var pracReset = document.getElementById("pracReset");
+    if (pracReset) pracReset.onclick = function () {
+      state.prac = defaultPrac();
+      save(); render();
+    };
+    var roll72 = document.getElementById("roll72");
+    if (roll72) roll72.onclick = function () {
+      var p = prac();
+      var arr = p.rolls ? p.rolls.slice() : [];
+      for (var j = 0; j < 72; j++) { var a = trueDie(), b = trueDie(); arr.push({ a: a, b: b, total: a + b, at: Date.now() }); }
+      p.rolls = arr.slice(-72);
+      save(); render();
+    };
+  }
+
+  document.querySelector("nav").onclick = function (e) {
+    var t = e.target.getAttribute("data-tab");
+    if (!t) return;
+    tab = t;
+    if (t !== "history") histId = null;
+    render();
+  };
+
+  render();
+})();
+  </script>
+</body>
+</html>
