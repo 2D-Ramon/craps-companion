@@ -2,6 +2,9 @@
 
 Phone-first PWA for live table tracking. Casinos often ban phones at the rail — step away, tap the roll, glance, go back.
 
+**Live:** https://craps-companion-nine.vercel.app  
+**GitHub:** https://github.com/2D-Ramon/craps-companion
+
 ## Run
 
 ```bash
