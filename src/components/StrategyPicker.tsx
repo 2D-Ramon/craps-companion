@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { parseStrategyText } from "@/lib/parseStrategy";
 import {
   STRATEGIES,
   STRATEGY_BLURB,
@@ -118,8 +119,10 @@ export function StrategyPicker({
           field={field}
           setField={setField}
           place={place}
+          setPlace={setPlace}
           togglePlace={togglePlace}
           err={err}
+          setErr={setErr}
           onSave={save}
           onCancel={() => {
             setOpen(false);
@@ -141,8 +144,10 @@ export function CustomForm({
   field,
   setField,
   place,
+  setPlace,
   togglePlace,
   err,
+  setErr,
   onSave,
   onCancel,
 }: {
@@ -155,18 +160,143 @@ export function CustomForm({
   field: boolean;
   setField: (v: boolean) => void;
   place: Box[];
+  setPlace: (v: Box[]) => void;
   togglePlace: (n: Box) => void;
   err: string;
+  setErr: (v: string) => void;
   onSave: () => void;
   onCancel: () => void;
 }) {
+  const [prompt, setPrompt] = useState("");
+  const [listening, setListening] = useState(false);
+  const [building, setBuilding] = useState(false);
+  const recRef = useRef<{ stop: () => void } | null>(null);
+
+  function applyParsed(p: { name: string; pass: boolean; dont: boolean; field: boolean; place: Box[] }) {
+    setName(p.name);
+    setPass(p.pass);
+    setDont(p.dont);
+    setField(p.field);
+    setPlace(p.place);
+    setErr("");
+  }
+
+  async function buildFrom(text: string) {
+    const said = text.trim();
+    if (!said) {
+      setErr("Type or speak a strategy first.");
+      return;
+    }
+    setBuilding(true);
+    setErr("");
+    try {
+      const res = await fetch("/api/strategy-parse", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: said }),
+      });
+      const data = (await res.json()) as {
+        name?: string;
+        pass?: boolean;
+        dont?: boolean;
+        field?: boolean;
+        place?: Box[];
+        error?: string;
+      };
+      if (!res.ok || data.error) {
+        applyParsed(parseStrategyText(said));
+      } else {
+        applyParsed({
+          name: data.name || "Custom",
+          pass: Boolean(data.pass),
+          dont: Boolean(data.dont),
+          field: Boolean(data.field),
+          place: data.place ?? [],
+        });
+      }
+    } catch {
+      applyParsed(parseStrategyText(said));
+    } finally {
+      setBuilding(false);
+    }
+  }
+
+  function toggleListen() {
+    const w = window as unknown as {
+      SpeechRecognition?: new () => SpeechRec;
+      webkitSpeechRecognition?: new () => SpeechRec;
+    };
+    const Ctor = w.SpeechRecognition || w.webkitSpeechRecognition;
+    if (!Ctor) {
+      setErr("This browser can't listen. Type the strategy instead.");
+      return;
+    }
+    if (listening) {
+      recRef.current?.stop();
+      recRef.current = null;
+      setListening(false);
+      return;
+    }
+    const rec = new Ctor();
+    rec.lang = "en-US";
+    rec.interimResults = false;
+    rec.continuous = false;
+    rec.onresult = (ev) => {
+      const said = ev.results[0]?.[0]?.transcript ?? "";
+      if (said) {
+        setPrompt(said);
+        void buildFrom(said);
+      }
+    };
+    rec.onerror = () => {
+      setListening(false);
+      recRef.current = null;
+    };
+    rec.onend = () => {
+      setListening(false);
+      recRef.current = null;
+    };
+    recRef.current = rec;
+    setListening(true);
+    rec.start();
+  }
+
   return (
     <div className="mt-3 rounded-xl border border-gold/40 bg-black/35 p-3 space-y-3">
       <p className="font-semibold text-gold">Your strategy</p>
       <p className="text-xs text-muted">
-        Name it, pick the bets you want working every shooter. Odds go up automatically on Pass /
-        Don&apos;t when a point is set.
+        Type it or speak it in plain English. We build the bets. Fix anything that looks wrong, then
+        save. Odds go up automatically on Pass / Don&apos;t when a point is set.
       </p>
+      <label className="block text-sm">
+        Type or speak
+        <textarea
+          value={prompt}
+          onChange={(e) => setPrompt(e.target.value)}
+          rows={3}
+          placeholder='e.g. "Place the 6 and 8 and a field" or "Iron Cross"'
+          className="mt-1 w-full rounded-lg bg-black/30 border border-gold/25 px-3 py-2 text-base"
+        />
+      </label>
+      <div className="grid grid-cols-2 gap-2">
+        <button
+          type="button"
+          onClick={toggleListen}
+          className={`h-11 rounded-lg border text-sm font-semibold ${
+            listening ? "border-gold bg-gold text-felt-deep" : "border-gold/40 text-gold"
+          }`}
+        >
+          {listening ? "Listening… tap to stop" : "Speak"}
+        </button>
+        <button
+          type="button"
+          onClick={() => void buildFrom(prompt)}
+          disabled={building}
+          className="h-11 rounded-lg bg-gold text-felt-deep font-semibold text-sm disabled:opacity-60"
+        >
+          {building ? "Building…" : "Build with AI"}
+        </button>
+      </div>
       <label className="block text-sm">
         Name
         <input
@@ -228,3 +358,14 @@ function Toggle({ on, onClick, label }: { on: boolean; onClick: () => void; labe
     </button>
   );
 }
+
+type SpeechRec = {
+  lang: string;
+  interimResults: boolean;
+  continuous: boolean;
+  onresult: (ev: { results: { [i: number]: { [j: number]: { transcript: string } } } }) => void;
+  onerror: () => void;
+  onend: () => void;
+  start: () => void;
+  stop: () => void;
+};
