@@ -27,12 +27,25 @@ export type TableRules = {
   vigUpFront: boolean;
 };
 
-export type StrategyId =
+export type BuiltinStrategyId =
   | "track"
   | "pass-odds"
   | "place-68"
   | "iron-cross"
   | "dont-pass";
+
+/** Built-in id or a saved custom id (`custom-…`). */
+export type StrategyId = BuiltinStrategyId | string;
+
+export type CustomStrategy = {
+  id: string;
+  name: string;
+  pass: boolean;
+  dont: boolean;
+  field: boolean;
+  place: Box[];
+  createdAt: number;
+};
 
 export type OpenBets = {
   pass: number;

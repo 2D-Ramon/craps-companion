@@ -6,14 +6,24 @@ import { GlancePercents } from "@/components/GlancePercents";
 import { RollStrip } from "@/components/RollStrip";
 import { money } from "@/lib/format";
 import { puckLabel } from "@/lib/puck";
-import { STRATEGY_LABEL } from "@/lib/strategies";
+import { strategyLabel } from "@/lib/strategies";
 import { useStore } from "@/lib/store";
 import type { Die } from "@/lib/types";
 import { asTotal } from "@/lib/dice";
 
 export function LiveTable() {
-  const { active, addPair, addTotal, undo, replaceLast, setPuck, end, goalBanner, clearBanner } =
-    useStore();
+  const {
+    active,
+    addPair,
+    addTotal,
+    undo,
+    replaceLast,
+    setPuck,
+    end,
+    goalBanner,
+    clearBanner,
+    customStrategies,
+  } = useStore();
   const [edit, setEdit] = useState(false);
   const [ea, setEa] = useState<Die | "">("");
   const [eb, setEb] = useState<Die | "">("");
@@ -101,7 +111,7 @@ export function LiveTable() {
             true
           )}
         />
-        <Stat label="Strategy" value={STRATEGY_LABEL[active.strategyId]} small />
+        <Stat label="Strategy" value={strategyLabel(active.strategyId, customStrategies)} small />
       </div>
 
       {(active.winGoal || active.lossLimit) && (

@@ -9,10 +9,23 @@ import {
   useReducer,
   useState,
 } from "react";
-import type { Die, Goal, Roll, Session, StrategyId, TableRules, Total } from "./types";
+import type {
+  CustomStrategy,
+  Die,
+  Goal,
+  Roll,
+  Session,
+  StrategyId,
+  TableRules,
+  Total,
+} from "./types";
 import { asTotal } from "./dice";
 import { settle } from "./payouts";
-import { seedBets } from "./strategies";
+import {
+  lookupCustom,
+  reseedAfterSevenOut,
+  seedBets,
+} from "./strategies";
 
 const KEY = "craps.v1";
 const MAX_LIVE = 200;
@@ -20,6 +33,7 @@ const MAX_LIVE = 200;
 type Persist = {
   sessions: Session[];
   activeId: string | null;
+  customStrategies: CustomStrategy[];
 };
 
 type StartInput = {
@@ -49,16 +63,24 @@ function uid(): string {
   return `s-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
+function emptyPersist(): Persist {
+  return { sessions: [], activeId: null, customStrategies: [] };
+}
+
 function load(): Persist {
-  if (typeof window === "undefined") return { sessions: [], activeId: null };
+  if (typeof window === "undefined") return emptyPersist();
   try {
     const raw = localStorage.getItem(KEY);
-    if (!raw) return { sessions: [], activeId: null };
+    if (!raw) return emptyPersist();
     const p = JSON.parse(raw) as Persist;
-    if (!Array.isArray(p.sessions)) return { sessions: [], activeId: null };
-    return { sessions: p.sessions, activeId: p.activeId ?? null };
+    if (!Array.isArray(p.sessions)) return emptyPersist();
+    return {
+      sessions: p.sessions,
+      activeId: p.activeId ?? null,
+      customStrategies: Array.isArray(p.customStrategies) ? p.customStrategies : [],
+    };
   } catch {
-    return { sessions: [], activeId: null };
+    return emptyPersist();
   }
 }
 
@@ -84,9 +106,14 @@ function activeOf(data: Persist): Session | null {
   return data.sessions.find((s) => s.id === data.activeId && !s.endedAt) ?? null;
 }
 
-function rebuild(base: Session, rolls: Roll[]): Session {
+function seedFor(id: StrategyId, table: TableRules, customs: CustomStrategy[]) {
+  return seedBets(id, table, lookupCustom(id, customs));
+}
+
+function rebuild(base: Session, rolls: Roll[], customs: CustomStrategy[]): Session {
+  const custom = lookupCustom(base.strategyId, customs);
   let puck = { on: false } as Session["puck"];
-  let bets = seedBets(base.strategyId, base.table);
+  let bets = seedBets(base.strategyId, base.table, custom);
   let pnl = 0;
   let shooterPnl = 0;
   let shooter = 1;
@@ -101,10 +128,7 @@ function rebuild(base: Session, rolls: Roll[]): Session {
     if (call.sevenOut) {
       shooter += 1;
       shooterPnl = 0;
-      bets.place = seedBets(base.strategyId, base.table).place;
-      bets.field = seedBets(base.strategyId, base.table).field;
-      if (base.strategyId === "pass-odds") bets.pass = base.table.min;
-      if (base.strategyId === "dont-pass") bets.dont = base.table.min;
+      bets = reseedAfterSevenOut(base.strategyId, base.table, bets, custom);
     }
     stamped.push(full);
   }
@@ -128,6 +152,7 @@ function reducer(state: Persist, action: Action): Persist {
 type Store = {
   hydrated: boolean;
   sessions: Session[];
+  customStrategies: CustomStrategy[];
   active: Session | null;
   start: (input: StartInput) => string;
   end: () => void;
@@ -137,6 +162,8 @@ type Store = {
   replaceLast: (a: Die | null, b: Die | null, total: Total) => void;
   setPuck: (on: boolean, point?: 4 | 5 | 6 | 8 | 9 | 10) => void;
   resume: (id: string) => void;
+  saveCustom: (input: Omit<CustomStrategy, "id" | "createdAt">) => string;
+  deleteCustom: (id: string) => void;
   goalBanner: string | null;
   clearBanner: () => void;
 };
@@ -144,7 +171,7 @@ type Store = {
 const Ctx = createContext<Store | null>(null);
 
 export function StoreProvider({ children }: { children: React.ReactNode }) {
-  const [data, dispatch] = useReducer(reducer, { sessions: [], activeId: null });
+  const [data, dispatch] = useReducer(reducer, emptyPersist());
   const [ready, setReady] = useState(false);
   const [banner, setBanner] = useState<string | null>(null);
 
@@ -162,6 +189,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const start = useCallback(
     (input: StartInput) => {
       const id = uid();
+      const prev = load();
       const session: Session = {
         id,
         casino: input.casino,
@@ -179,13 +207,16 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         pnl: 0,
         shooterPnl: 0,
         bankroll: input.buyIn,
-        bets: seedBets(input.strategyId, input.table),
+        bets: seedFor(input.strategyId, input.table, prev.customStrategies),
         goalHitAt: null,
         lossHitAt: null,
         notes: "",
       };
-      const prev = load();
-      commit({ sessions: [session, ...prev.sessions], activeId: id });
+      commit({
+        sessions: [session, ...prev.sessions],
+        activeId: id,
+        customStrategies: prev.customStrategies,
+      });
       setBanner(null);
       return id;
     },
@@ -200,6 +231,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       commit({
         sessions: data.sessions.map((s) => (s.id === cur.id ? nextS : s)),
         activeId: data.activeId,
+        customStrategies: data.customStrategies,
       });
     },
     [commit, data]
@@ -210,7 +242,9 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       patchActive((s) => {
         if (s.rolls.length >= MAX_LIVE) return s;
         const full: Roll = { ...roll, shooter: s.shooter, at: Date.now() };
-        const { bets, delta, call } = settle(s.bets, s.puck, full, s.table);
+        const settled = settle(s.bets, s.puck, full, s.table);
+        let bets = settled.bets;
+        const { delta, call } = settled;
         let shooter = s.shooter;
         let shooterPnl = s.shooterPnl + delta;
         if (call.sevenOut) {
@@ -218,10 +252,12 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           s.lastShooterPnl = shooterPnl;
           shooter += 1;
           shooterPnl = 0;
-          bets.place = seedBets(s.strategyId, s.table).place;
-          bets.field = seedBets(s.strategyId, s.table).field;
-          if (s.strategyId === "pass-odds") bets.pass = s.table.min;
-          if (s.strategyId === "dont-pass") bets.dont = s.table.min;
+          bets = reseedAfterSevenOut(
+            s.strategyId,
+            s.table,
+            bets,
+            lookupCustom(s.strategyId, data.customStrategies),
+          );
         }
         const pnl = s.pnl + delta;
         const elapsed = (Date.now() - s.startedAt) / 60000;
@@ -259,7 +295,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         };
       });
     },
-    [patchActive]
+    [patchActive, data.customStrategies]
   );
 
   const addPair = useCallback((a: Die, b: Die) => {
@@ -274,8 +310,11 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     const cur = activeOf(data);
     if (!cur || cur.rolls.length === 0) return;
     commit({
-      sessions: data.sessions.map((s) => (s.id === cur.id ? rebuild(cur, cur.rolls.slice(0, -1)) : s)),
+      sessions: data.sessions.map((s) =>
+        s.id === cur.id ? rebuild(cur, cur.rolls.slice(0, -1), data.customStrategies) : s,
+      ),
       activeId: data.activeId,
+      customStrategies: data.customStrategies,
     });
   }, [commit, data]);
 
@@ -286,8 +325,11 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       const last = cur.rolls[cur.rolls.length - 1];
       const rolls = [...cur.rolls.slice(0, -1), { ...last, a, b, total }];
       commit({
-        sessions: data.sessions.map((s) => (s.id === cur.id ? rebuild(cur, rolls) : s)),
+        sessions: data.sessions.map((s) =>
+          s.id === cur.id ? rebuild(cur, rolls, data.customStrategies) : s,
+        ),
         activeId: data.activeId,
+        customStrategies: data.customStrategies,
       });
     },
     [commit, data]
@@ -309,6 +351,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     commit({
       sessions: data.sessions.map((s) => (s.id === cur.id ? { ...s, endedAt: Date.now() } : s)),
       activeId: null,
+      customStrategies: data.customStrategies,
     });
     setBanner(null);
   }, [commit, data]);
@@ -320,11 +363,40 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     [commit, data]
   );
 
+  const saveCustom = useCallback(
+    (input: Omit<CustomStrategy, "id" | "createdAt">) => {
+      const id = `custom-${uid()}`;
+      const next: CustomStrategy = {
+        ...input,
+        name: input.name.trim(),
+        id,
+        createdAt: Date.now(),
+      };
+      commit({
+        ...data,
+        customStrategies: [next, ...data.customStrategies],
+      });
+      return id;
+    },
+    [commit, data]
+  );
+
+  const deleteCustom = useCallback(
+    (id: string) => {
+      commit({
+        ...data,
+        customStrategies: data.customStrategies.filter((c) => c.id !== id),
+      });
+    },
+    [commit, data]
+  );
+
   const active = useMemo(() => activeOf(data), [data]);
 
   const value: Store = {
     hydrated: ready,
     sessions: data.sessions,
+    customStrategies: data.customStrategies,
     active,
     start,
     end,
@@ -334,6 +406,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     replaceLast,
     setPuck,
     resume,
+    saveCustom,
+    deleteCustom,
     goalBanner: banner,
     clearBanner: () => setBanner(null),
   };

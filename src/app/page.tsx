@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import { LiveTable } from "@/components/LiveTable";
+import { StrategyPicker } from "@/components/StrategyPicker";
 import { useStore } from "@/lib/store";
-import { STRATEGIES, STRATEGY_BLURB, STRATEGY_LABEL } from "@/lib/strategies";
 import type { Goal, GoalKind, StrategyId } from "@/lib/types";
 
 function MoneyInput({
@@ -176,24 +176,7 @@ export default function HomePage() {
         Start session
       </button>
 
-      <div>
-        <p className="text-sm mb-2">Strategy (real money)</p>
-        <div className="space-y-2">
-          {STRATEGIES.map((id) => (
-            <button
-              key={id}
-              type="button"
-              onClick={() => setStrategyId(id)}
-              className={`w-full text-left rounded-xl px-3 py-3 border ${
-                strategyId === id ? "border-gold bg-gold/15" : "border-gold/20 bg-black/20"
-              }`}
-            >
-              <div className="font-semibold">{STRATEGY_LABEL[id]}</div>
-              <div className="text-xs text-muted">{STRATEGY_BLURB[id]}</div>
-            </button>
-          ))}
-        </div>
-      </div>
+      <StrategyPicker value={strategyId} onChange={setStrategyId} />
 
       <div className="rounded-xl border border-gold/20 bg-black/20 p-3 space-y-2">
         <p className="text-sm font-semibold">Field pays</p>

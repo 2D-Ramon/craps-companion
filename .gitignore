@@ -42,3 +42,5 @@ next-env.d.ts
 
 # local screenshot dumps
 .practice-shots/
+
+.vercel
