@@ -43,6 +43,74 @@ button {
   touch-action: manipulation;
 }
 
+:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+
+.df-skip {
+  position: absolute;
+  left: -999px;
+  top: 0;
+  z-index: 100;
+  background: var(--gold);
+  color: var(--felt-deep);
+  padding: 8px 12px;
+  font-weight: 700;
+}
+.df-skip:focus {
+  left: 8px;
+  top: 8px;
+}
+
+.pit-card {
+  border-radius: 0.9rem;
+  border: 1px solid color-mix(in srgb, var(--gold) 28%, transparent);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04), transparent 40%),
+    rgba(0, 0, 0, 0.28);
+  box-shadow: inset 0 1px 0 rgba(230, 201, 106, 0.12);
+}
+
+.pit-input,
+.pit-select {
+  width: 100%;
+  height: 2.75rem;
+  border-radius: 0.55rem;
+  border: 1px solid color-mix(in srgb, var(--gold) 32%, transparent);
+  background: rgba(0, 0, 0, 0.42);
+  color: var(--ink);
+  padding: 0 0.75rem;
+  font-size: 1rem;
+}
+.pit-select {
+  color-scheme: dark;
+}
+
+.pit-btn {
+  height: 2.75rem;
+  border-radius: 0.55rem;
+  border: 1px solid color-mix(in srgb, var(--gold) 35%, transparent);
+  background: rgba(0, 0, 0, 0.35);
+  color: var(--ink);
+  font-weight: 600;
+}
+.pit-btn-gold {
+  background: var(--gold);
+  color: var(--felt-deep);
+  border-color: var(--gold);
+  font-weight: 700;
+}
+
+.empty-help {
+  padding: 2.5rem 0.5rem;
+  text-align: center;
+}
+.empty-help a {
+  color: var(--gold);
+  text-decoration: underline;
+}
+
 .felt-bg {
   background:
     radial-gradient(1200px 600px at 50% -10%, #1a6b50 0%, transparent 55%),

@@ -17,7 +17,6 @@ const TABS = [
 export function Shell({ children }: { children: React.ReactNode }) {
   const path = usePathname();
   const { active } = useStore();
-  const ver = "v9";
   const practice = path === "/practice";
   const prev = useRef(path);
   useEffect(() => {
@@ -26,15 +25,18 @@ export function Shell({ children }: { children: React.ReactNode }) {
   }, [path]);
   return (
     <div className={`felt-bg min-h-dvh flex flex-col ${practice ? "shell-practice" : ""}`}>
+      <a href="#main" className="df-skip">
+        Skip to content
+      </a>
       <header className="shell-header sticky top-0 z-20 bg-felt-deep/90 backdrop-blur border-b border-gold/40 px-4 pt-[max(0.6rem,env(safe-area-inset-top))] pb-2">
         <div className="flex items-baseline justify-between max-w-lg mx-auto">
-          <p className="font-[family-name:var(--font-display)] tracking-[0.28em] text-gold text-sm">
-            CRAPS <span className="tracking-normal font-sans text-[10px] text-muted">{ver}</span>
+          <p className="font-[family-name:var(--font-display)] tracking-[0.28em] text-gold text-[15px]">
+            CRAPS
           </p>
           {practice ? (
             <p className="text-[11px] text-muted uppercase tracking-widest shrink-0">Practice</p>
           ) : active ? (
-            <p className="text-[11px] text-muted uppercase tracking-widest">
+            <p className="text-[11px] text-gold/80 uppercase tracking-widest">
               Live · {active.casino || "table"}
             </p>
           ) : (
@@ -43,6 +45,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
         </div>
       </header>
       <main
+        id="main"
         className={
           practice
             ? "shell-main-practice flex-1 w-full min-h-0"
@@ -59,7 +62,9 @@ export function Shell({ children }: { children: React.ReactNode }) {
               <Link
                 key={t.href}
                 href={t.href}
-                className={`py-3 text-[11px] tracking-wide ${on ? "text-gold" : "text-muted"}`}
+                className={`py-3 text-xs tracking-wide ${
+                  on ? "text-gold font-semibold border-t-2 border-gold -mt-px" : "text-muted"
+                }`}
               >
                 {t.label}
               </Link>

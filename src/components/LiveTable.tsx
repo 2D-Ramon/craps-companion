@@ -114,23 +114,6 @@ export function LiveTable() {
         <Stat label="Strategy" value={strategyLabel(active.strategyId, customStrategies)} small />
       </div>
 
-      {(active.winGoal || active.lossLimit) && (
-        <div className="flex justify-between text-xs text-muted px-1">
-          <span>Win {active.winGoal ? `${active.winGoal.value} ${active.winGoal.kind}` : "—"}</span>
-          <span>Loss {active.lossLimit ? `${active.lossLimit.value} ${active.lossLimit.kind}` : "—"}</span>
-        </div>
-      )}
-      <p className="text-xs text-muted px-1">
-        Field: 1x on 3/4/9/10/11 · {active.table.fieldTwo}x on 2 · {active.table.fieldTwelve}x on 12
-      </p>
-
-      <div>
-        <p className="text-[11px] uppercase tracking-widest text-muted mb-2">Last 21</p>
-        <RollStrip rolls={active.rolls} n={21} withPuck />
-      </div>
-
-      <GlancePercents rolls={active.rolls} windowSize={90} />
-
       <DicePad onPair={addPair} onTotal={addTotal} disabled={active.rolls.length >= 200} />
 
       <div className="grid grid-cols-3 gap-2">
@@ -160,6 +143,23 @@ export function LiveTable() {
           End
         </button>
       </div>
+
+      {(active.winGoal || active.lossLimit) && (
+        <div className="flex justify-between text-xs text-muted px-1">
+          <span>Win {active.winGoal ? `${active.winGoal.value} ${active.winGoal.kind}` : "—"}</span>
+          <span>Loss {active.lossLimit ? `${active.lossLimit.value} ${active.lossLimit.kind}` : "—"}</span>
+        </div>
+      )}
+      <p className="text-xs text-muted px-1">
+        Field: 1x on 3/4/9/10/11 · {active.table.fieldTwo}x on 2 · {active.table.fieldTwelve}x on 12
+      </p>
+
+      <div>
+        <p className="text-[11px] uppercase tracking-widest text-muted mb-2">Last 21</p>
+        <RollStrip rolls={active.rolls} n={21} withPuck />
+      </div>
+
+      <GlancePercents rolls={active.rolls} windowSize={90} />
 
       {edit && last && (
         <div className="rounded-xl border border-gold/30 bg-black/40 p-3 space-y-2">

@@ -23,7 +23,18 @@ export default function HistoryPage() {
   const session = sessions.find((s) => s.id === openId) ?? null;
 
   if (!sessions.length) {
-    return <p className="text-muted pt-8">Finished sessions land here. Replay their dice on other strategies.</p>;
+    return (
+      <div className="empty-help">
+        <h1 className="font-[family-name:var(--font-display)] text-2xl text-gold">History</h1>
+        <p className="text-muted mt-3">
+          Finished sessions land here. Replay those exact dice on up to five strategies — including
+          track-only nights.
+        </p>
+        <a href="/" className="inline-block mt-4">
+          Buy in on Table
+        </a>
+      </div>
+    );
   }
 
   if (session) {

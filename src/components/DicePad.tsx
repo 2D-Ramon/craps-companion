@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { DiceFace } from "@/components/DiceFace";
 import type { Die, Total } from "@/lib/types";
 import { asDie } from "@/lib/dice";
 
@@ -42,13 +43,14 @@ export function DicePad({
             key={n}
             type="button"
             onClick={() => tapDie(asDie(n))}
-            className={`h-14 rounded-lg text-xl font-semibold border ${
+            className={`h-16 rounded-lg border flex items-center justify-center ${
               left === n
-                ? "bg-gold text-felt-deep border-gold"
-                : "bg-felt-mid/80 border-gold/30 text-ink"
+                ? "bg-gold/25 border-gold"
+                : "bg-black/35 border-gold/30"
             }`}
+            aria-label={`Die ${n}`}
           >
-            {n}
+            <DiceFace n={n} size={40} />
           </button>
         ))}
       </div>

@@ -10,7 +10,15 @@ export default function StatsPage() {
   const { active, sessions } = useStore();
   const session = active ?? sessions[0];
   if (!session || !session.rolls.length) {
-    return <p className="text-muted pt-8">Log a few rolls and the board fills in here.</p>;
+    return (
+      <div className="empty-help">
+        <h1 className="font-[family-name:var(--font-display)] text-2xl text-gold">Stats</h1>
+        <p className="text-muted mt-3">Log a few rolls on Table and this board fills in.</p>
+        <a href="/" className="inline-block mt-4">
+          Go to Table
+        </a>
+      </div>
+    );
   }
   const s = computeStats(session.rolls);
   const avg =

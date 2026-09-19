@@ -2,8 +2,13 @@
 
 import { useState } from "react";
 import { StrategyBuilder } from "@/components/StrategyBuilder";
-import { describeCustom } from "@/lib/strategies";
-import { STRATEGIES, STRATEGY_BLURB, STRATEGY_LABEL } from "@/lib/strategies";
+import {
+  STRATEGIES,
+  STRATEGY_BLURB,
+  STRATEGY_LABEL,
+  describeCustom,
+  strategyLabel,
+} from "@/lib/strategies";
 import { useStore } from "@/lib/store";
 import type { StrategyId } from "@/lib/types";
 
@@ -21,7 +26,8 @@ export function StrategyPicker({
 
   return (
     <div>
-      <p className="text-sm mb-2">Strategy (real money)</p>
+      <p className="text-sm mb-1">Strategy (real money)</p>
+      <p className="text-xs text-gold mb-2">Using: {strategyLabel(value, customStrategies)}</p>
       <div className="space-y-2">
         {STRATEGIES.map((id) => (
           <button

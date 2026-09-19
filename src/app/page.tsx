@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { LiveTable } from "@/components/LiveTable";
 import { StrategyPicker } from "@/components/StrategyPicker";
+import { strategyLabel } from "@/lib/strategies";
 import { useStore } from "@/lib/store";
 import type { Goal, GoalKind, StrategyId } from "@/lib/types";
 
@@ -26,14 +27,14 @@ function MoneyInput({
         spellCheck={false}
         value={value}
         onChange={(e) => onChange(e.target.value.replace(/[^0-9.]/g, ""))}
-        className="mt-1 w-full h-12 rounded-lg bg-black/30 border border-gold/25 px-3 text-base"
+        className="pit-input mt-1"
       />
     </label>
   );
 }
 
 export default function HomePage() {
-  const { active, start } = useStore();
+  const { active, start, customStrategies } = useStore();
   const [casino, setCasino] = useState("River Spirit / Tulsa");
   const [buyIn, setBuyIn] = useState("300");
   const [min, setMin] = useState("10");
@@ -91,21 +92,39 @@ export default function HomePage() {
 
   if (active) return <LiveTable />;
 
+  const stratName = strategyLabel(strategyId, customStrategies);
+
   return (
     <div className="space-y-5">
       <div>
         <h1 className="font-[family-name:var(--font-display)] text-3xl text-gold tracking-wide">Buy in</h1>
         <p className="text-sm text-muted mt-1">
-          Set the table, pick a strategy, then step away and tap rolls as they happen.
+          Set the table and the system you will follow. Then step off the rail, tap the roll, glance,
+          go back.
         </p>
       </div>
+
+      <ol className="pit-card grid grid-cols-3 gap-2 p-3 text-center text-[11px] text-muted">
+        <li>
+          <span className="block text-gold font-semibold">1. Table</span>
+          Buy-in and min
+        </li>
+        <li>
+          <span className="block text-gold font-semibold">2. Strategy</span>
+          What you are betting
+        </li>
+        <li>
+          <span className="block text-gold font-semibold">3. Tap</span>
+          Dice, then glance
+        </li>
+      </ol>
 
       <label className="block text-sm">
         Casino
         <input
           value={casino}
           onChange={(e) => setCasino(e.target.value)}
-          className="mt-1 w-full h-12 rounded-lg bg-black/30 border border-gold/25 px-3 text-base"
+          className="pit-input mt-1"
         />
       </label>
 
@@ -120,7 +139,7 @@ export default function HomePage() {
           <select
             value={winKind}
             onChange={(e) => setWinKind(e.target.value as GoalKind | "none")}
-            className="mt-1 w-full h-11 rounded-lg bg-black/30 border border-gold/25 px-2 text-base"
+            className="pit-select mt-1"
           >
             <option value="none">None</option>
             <option value="dollars">Dollars</option>
@@ -135,7 +154,7 @@ export default function HomePage() {
               autoComplete="off"
               value={winVal}
               onChange={(e) => setWinVal(e.target.value.replace(/[^0-9.]/g, ""))}
-              className="mt-2 w-full h-11 rounded-lg bg-black/30 border border-gold/25 px-3 text-base"
+              className="pit-input mt-2"
             />
           )}
         </label>
@@ -144,7 +163,7 @@ export default function HomePage() {
           <select
             value={lossKind}
             onChange={(e) => setLossKind(e.target.value as GoalKind | "none")}
-            className="mt-1 w-full h-11 rounded-lg bg-black/30 border border-gold/25 px-2 text-base"
+            className="pit-select mt-1"
           >
             <option value="none">None</option>
             <option value="dollars">Dollars</option>
@@ -158,31 +177,13 @@ export default function HomePage() {
               autoComplete="off"
               value={lossVal}
               onChange={(e) => setLossVal(e.target.value.replace(/[^0-9.]/g, ""))}
-              className="mt-2 w-full h-11 rounded-lg bg-black/30 border border-gold/25 px-3 text-base"
+              className="pit-input mt-2"
             />
           )}
         </label>
       </div>
 
-      {err && (
-        <p className="rounded-lg bg-danger/20 border border-danger px-3 py-2 text-sm">{err}</p>
-      )}
-
-      <button
-        type="button"
-        onClick={() => go()}
-        className="w-full h-16 rounded-xl bg-gold text-felt-deep font-semibold text-lg"
-      >
-        Start session
-      </button>
-
-      <StrategyPicker
-        value={strategyId}
-        onChange={setStrategyId}
-        tableMin={Number(min) || 10}
-      />
-
-      <div className="rounded-xl border border-gold/20 bg-black/20 p-3 space-y-2">
+      <div className="pit-card p-3 space-y-2">
         <p className="text-sm font-semibold">Field pays</p>
         <p className="text-sm text-muted">
           {fieldHigh
@@ -195,20 +196,20 @@ export default function HomePage() {
         </label>
       </div>
 
-      <div className="rounded-xl border border-gold/20 bg-black/20 p-3 space-y-2">
+      <div className="pit-card p-3 space-y-2">
         <p className="text-sm font-semibold">First roll — is the puck on?</p>
         <div className="flex gap-2">
           <button
             type="button"
             onClick={() => setPuckOn(false)}
-            className={`flex-1 h-11 rounded-lg ${!puckOn ? "bg-gold text-felt-deep" : "bg-black/30"}`}
+            className={`flex-1 pit-btn ${!puckOn ? "pit-btn-gold" : ""}`}
           >
             Come out
           </button>
           <button
             type="button"
             onClick={() => setPuckOn(true)}
-            className={`flex-1 h-11 rounded-lg ${puckOn ? "bg-gold text-felt-deep" : "bg-black/30"}`}
+            className={`flex-1 pit-btn ${puckOn ? "pit-btn-gold" : ""}`}
           >
             Point on
           </button>
@@ -220,13 +221,34 @@ export default function HomePage() {
                 key={n}
                 type="button"
                 onClick={() => setPoint(n)}
-                className={`h-10 rounded-md ${point === n ? "bg-gold text-felt-deep" : "bg-black/30"}`}
+                className={`h-10 rounded-md ${point === n ? "pit-btn-gold" : "pit-btn"}`}
               >
                 {n}
               </button>
             ))}
           </div>
         )}
+      </div>
+
+      <StrategyPicker
+        value={strategyId}
+        onChange={setStrategyId}
+        tableMin={Number(min) || 10}
+      />
+
+      {err && (
+        <p className="rounded-lg bg-danger/20 border border-danger px-3 py-2 text-sm">{err}</p>
+      )}
+
+      <div className="sticky bottom-[4.6rem] z-[15] -mx-1 pt-2">
+        <button
+          type="button"
+          onClick={() => go()}
+          className="w-full h-16 rounded-xl pit-btn-gold text-lg shadow-[0_8px_24px_rgba(0,0,0,0.45)]"
+        >
+          Start session
+          <span className="block text-xs font-semibold opacity-80">{stratName}</span>
+        </button>
       </div>
     </div>
   );
