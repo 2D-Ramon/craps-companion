@@ -143,11 +143,13 @@ export function parseStrategyText(raw: string): ParsedStrategy {
   }
 
   const hitN = mentioned[0];
-  const hitsMatch = t.match(/\b(?:after|if|when)\s+(\d+|two|three|four|one)\s+hits?\b/);
   const wordHits: Record<string, number> = { one: 1, two: 2, three: 3, four: 4 };
   let hitCount = 0;
-  if (hitsMatch) {
-    hitCount = wordHits[hitsMatch[1]] ?? Number(hitsMatch[1]) ?? 0;
+  if (has(t, /\btwice\b/) || has(t, /\btwo times\b/)) hitCount = 2;
+  else if (has(t, /\bthree times\b/)) hitCount = 3;
+  else {
+    const hitsMatch = t.match(/\bafter\s+(\d+|two|three|four|one)\s+hits?\b/);
+    if (hitsMatch) hitCount = wordHits[hitsMatch[1]] ?? Number(hitsMatch[1]) ?? 0;
   }
 
   const isIf = has(t, /\b(if|when|after|once)\b/);
