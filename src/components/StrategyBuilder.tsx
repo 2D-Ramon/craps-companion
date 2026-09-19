@@ -419,26 +419,42 @@ function Preview({
         />
       </label>
 
-      <BetSection
-        title="Starting bets — come out (puck off)"
-        hint="Pass / Don't usually live here. Set a dollar amount on each bet. Buy/lay/place can work on come out if you check that box."
-        list={comeout}
-        setList={setComeout}
-        defaultPhase="comeout"
-        tableMin={tableMin}
-      />
-      <BetSection
-        title="Starting bets — point is on"
-        hint="Place, buy 4/5/9/10, lay, field, come after a point is established."
-        list={point}
-        setList={setPoint}
-        defaultPhase="point"
-        tableMin={tableMin}
-      />
+      <details className="pit-card p-3" open>
+        <summary className="text-sm font-semibold cursor-pointer">
+          Come out ({comeout.length})
+        </summary>
+        <div className="mt-2">
+          <BetSection
+            title=""
+            hint="Pass / Don't usually live here. Set a dollar amount on each bet."
+            list={comeout}
+            setList={setComeout}
+            defaultPhase="comeout"
+            tableMin={tableMin}
+          />
+        </div>
+      </details>
+      <details className="pit-card p-3" open>
+        <summary className="text-sm font-semibold cursor-pointer">
+          Point on ({point.length})
+        </summary>
+        <div className="mt-2">
+          <BetSection
+            title=""
+            hint="Place, buy 4/5/9/10, lay, field after a point is established."
+            list={point}
+            setList={setPoint}
+            defaultPhase="point"
+            tableMin={tableMin}
+          />
+        </div>
+      </details>
 
-      <div>
-        <div className="flex items-center justify-between mb-2">
-          <p className="text-sm font-semibold">If / when rules</p>
+      <details className="pit-card p-3" open>
+        <summary className="text-sm font-semibold cursor-pointer">
+          If / when ({rules.length})
+        </summary>
+        <div className="flex justify-end mt-2 mb-2">
           <button
             type="button"
             className="text-xs text-gold"
@@ -474,7 +490,7 @@ function Preview({
             />
           ))}
         </div>
-      </div>
+      </details>
 
       {err && <p className="text-sm text-danger">{err}</p>}
       <button
@@ -524,7 +540,7 @@ function BetSection({
   }
   return (
     <div>
-      <p className="text-sm font-semibold">{title}</p>
+      {title ? <p className="text-sm font-semibold">{title}</p> : null}
       <p className="text-xs text-muted mb-2">{hint}</p>
       <div className="space-y-2 mb-2">
         <ChipRow label="Line">

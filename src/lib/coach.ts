@@ -19,6 +19,19 @@ export function coachLine(session: Session, custom: CustomStrategy | null): stri
     if (b.lay?.[n]) bits.push(`lay ${n} $${Math.round(b.lay[n]!)}`);
   }
   const table = bits.length ? bits.join(" · ") : "no chips out (track)";
-  const next = custom?.rules?.[0] ? ` Next: ${ruleLine(custom.rules[0])}.` : "";
-  return `${phase}: ${table}.${next}`;
+  const next = nextRule(session, custom);
+  return `${phase}: ${table}.${next ? ` Next: ${next}.` : ""}`;
+}
+
+function nextRule(session: Session, custom: CustomStrategy | null): string {
+  if (!custom?.rules?.length) return "";
+  const on = session.puck.on;
+  for (const r of custom.rules) {
+    const k = r.when.kind;
+    if (k === "sevenOut") continue;
+    if (k === "comeout" && on) continue;
+    if ((k === "pointOn" || k === "hit" || k === "hitsCount" || k === "pointSet") && !on) continue;
+    return ruleLine(r);
+  }
+  return ruleLine(custom.rules[0]);
 }

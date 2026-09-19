@@ -5,14 +5,14 @@ Repo: `C:\Users\2D\Projects\Project-4-Craps\web` (GitHub `2D-Ramon/craps-compani
 
 Paste the prompt at the bottom into a new Grok turn. Do not stop until every score is 10, or a score is blocked on a human decision (final wordmark, legal, original photography). Never inflate a 10.
 
-## Current scores (cycle 2, 2026-09-19)
+## Current scores (cycle 3, 2026-09-19)
 
-| Area | Cycle 1 | After cycle 2 |
+| Area | Cycle 2 | After cycle 3 |
 |------|------:|------------------|
-| CX (customer experience) | 7.0 | **8.0** |
-| UX | 7.5 | **8.0** |
-| UI | 7.5 | **8.0** |
-| Appearance | 7.5 | **8.0** |
+| CX (customer experience) | 8.0 | **8.3** |
+| UX | 8.0 | **8.4** |
+| UI | 8.0 | **8.3** |
+| Appearance | 8.0 | **8.0** |
 
 ### Cycle 1 shipped
 
@@ -22,16 +22,20 @@ Paste the prompt at the bottom into a new Grok turn. Do not stop until every sco
 
 - Live **Coach** toggle (default off): one line of what’s on the table right now
 - Light haptic on dice / total tap
-- Strategy builder chips grouped Place / Buy / Lay (not one wrapping soup)
+- Strategy builder chips grouped Place / Buy / Lay
 - Create-a-strategy above templates; yours listed first
 - History cards: pit chrome + last-12 roll strip
+
+### Cycle 3 shipped
+
+- Coach “Next:” skips seven-out / wrong-phase rules
+- Preview come-out / point / if-when in collapsible sections
 
 ### Still open (next cycle)
 
 - Come bets in the plan still not auto-settled live
-- Coach does not walk the *next* if/when (only lists chips + first rule)
-- Strategy preview is still a long form on a phone
-- Practice vs live still two looks (black stadium vs felt) — by design for the pit, but jarring in the same PWA
+- Preview still long even collapsed
+- Practice vs live still two looks (**partially by design**)
 - No original wordmark (**blocked**: human brand)
 - No photography (**blocked**)
 - Android `<select>` contrast still weak on some devices
