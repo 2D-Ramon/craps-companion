@@ -21,6 +21,7 @@ import type {
 } from "./types";
 import { asTotal } from "./dice";
 import { settle } from "./payouts";
+import { afterRoll, migrateCustom } from "./strategyEngine";
 import {
   lookupCustom,
   reseedAfterSevenOut,
@@ -77,7 +78,9 @@ function load(): Persist {
     return {
       sessions: p.sessions,
       activeId: p.activeId ?? null,
-      customStrategies: Array.isArray(p.customStrategies) ? p.customStrategies : [],
+      customStrategies: Array.isArray(p.customStrategies)
+        ? p.customStrategies.map(migrateCustom)
+        : [],
     };
   } catch {
     return emptyPersist();
@@ -113,22 +116,32 @@ function seedFor(id: StrategyId, table: TableRules, customs: CustomStrategy[]) {
 function rebuild(base: Session, rolls: Roll[], customs: CustomStrategy[]): Session {
   const custom = lookupCustom(base.strategyId, customs);
   let puck = { on: false } as Session["puck"];
-  let bets = seedBets(base.strategyId, base.table, custom);
+  let bets = seedBets(base.strategyId, base.table, custom, false);
   let pnl = 0;
   let shooterPnl = 0;
   let shooter = 1;
+  let hits: Partial<Record<4 | 5 | 6 | 8 | 9 | 10, number>> = {};
   const stamped: Roll[] = [];
   for (const r of rolls) {
     const full = { ...r, shooter };
+    const before = puck;
     const { bets: nb, delta, call } = settle(bets, puck, full, base.table);
     bets = nb;
     pnl += delta;
     shooterPnl += delta;
     puck = call.puck;
+    if (custom) {
+      const stepped = afterRoll(custom, base.table, bets, before, call, full, hits);
+      bets = stepped.bets;
+      hits = stepped.hits;
+    }
     if (call.sevenOut) {
       shooter += 1;
       shooterPnl = 0;
-      bets = reseedAfterSevenOut(base.strategyId, base.table, bets, custom);
+      hits = {};
+      if (!custom) {
+        bets = reseedAfterSevenOut(base.strategyId, base.table, bets, custom);
+      }
     }
     stamped.push(full);
   }
@@ -247,17 +260,22 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         const { delta, call } = settled;
         let shooter = s.shooter;
         let shooterPnl = s.shooterPnl + delta;
+        const custom = lookupCustom(s.strategyId, data.customStrategies);
+        let hitCounts = s.hitCounts ?? {};
+        if (custom) {
+          const stepped = afterRoll(custom, s.table, bets, s.puck, call, full, hitCounts);
+          bets = stepped.bets;
+          hitCounts = stepped.hits;
+        }
         if (call.sevenOut) {
           s.lastShooter = s.shooter;
           s.lastShooterPnl = shooterPnl;
           shooter += 1;
           shooterPnl = 0;
-          bets = reseedAfterSevenOut(
-            s.strategyId,
-            s.table,
-            bets,
-            lookupCustom(s.strategyId, data.customStrategies),
-          );
+          hitCounts = {};
+          if (!custom) {
+            bets = reseedAfterSevenOut(s.strategyId, s.table, bets, custom);
+          }
         }
         const pnl = s.pnl + delta;
         const elapsed = (Date.now() - s.startedAt) / 60000;
@@ -290,6 +308,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           shooterPnl,
           bankroll: s.buyIn + pnl,
           shooter,
+          hitCounts,
           goalHitAt,
           lossHitAt,
         };

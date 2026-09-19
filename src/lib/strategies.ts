@@ -1,5 +1,4 @@
 import type {
-  Box,
   BuiltinStrategyId,
   CustomStrategy,
   OpenBets,
@@ -8,6 +7,12 @@ import type {
   TableRules,
 } from "./types";
 import { emptyBets, settle } from "./payouts";
+import {
+  afterRoll,
+  describeCustom as describePlan,
+  migrateCustom,
+  seedFromPlan,
+} from "./strategyEngine";
 
 export const STRATEGIES: BuiltinStrategyId[] = [
   "track",
@@ -50,12 +55,7 @@ export function strategyBlurb(id: StrategyId, customs: CustomStrategy[] = []): s
 }
 
 export function describeCustom(c: CustomStrategy): string {
-  const bits: string[] = [];
-  if (c.pass) bits.push("Pass + odds");
-  if (c.dont) bits.push("Don't Pass + odds");
-  if (c.place.length) bits.push(`Place ${c.place.join(", ")}`);
-  if (c.field) bits.push("Field");
-  return bits.length ? bits.join(" · ") : "No auto bets";
+  return describePlan(c);
 }
 
 function place68(min: number): number {
@@ -66,28 +66,17 @@ function place59(min: number): number {
   return Math.max(5, Math.ceil(min / 5) * 5);
 }
 
-function placeAmount(box: Box, min: number): number {
-  return box === 6 || box === 8 ? place68(min) : place59(min);
-}
-
-export function seedFromCustom(c: CustomStrategy, table: TableRules): OpenBets {
-  const b = emptyBets();
-  const min = table.min;
-  if (c.pass) b.pass = min;
-  if (c.dont) b.dont = min;
-  if (c.field) b.field = min;
-  for (const n of c.place) {
-    b.place[n] = placeAmount(n, min);
-  }
-  return b;
+export function seedFromCustom(c: CustomStrategy, table: TableRules, puckOn = false): OpenBets {
+  return seedFromPlan(c, table, puckOn);
 }
 
 export function seedBets(
   id: StrategyId,
   table: TableRules,
   custom?: CustomStrategy | null,
+  puckOn = false,
 ): OpenBets {
-  if (custom) return seedFromCustom(custom, table);
+  if (custom) return seedFromCustom(custom, table, puckOn);
   const min = table.min;
   const b = emptyBets();
   if (id === "track") return b;
@@ -120,11 +109,13 @@ export function reseedAfterSevenOut(
   bets: OpenBets,
   custom?: CustomStrategy | null,
 ): OpenBets {
-  const seed = seedBets(id, table, custom);
+  const seed = seedBets(id, table, custom, false);
   bets.place = seed.place;
   bets.field = seed.field;
-  if (seed.pass) bets.pass = seed.pass;
-  if (seed.dont) bets.dont = seed.dont;
+  bets.pass = seed.pass;
+  bets.dont = seed.dont;
+  bets.passOdds = 0;
+  bets.dontOdds = 0;
   return bets;
 }
 
@@ -144,28 +135,40 @@ export function simulateOnRolls(
   custom?: CustomStrategy | null,
 ): { pnl: number } {
   let puck = { on: false } as { on: false } | { on: true; point: 4 | 5 | 6 | 8 | 9 | 10 };
-  let bets = seedBets(id, table, custom);
+  let bets = seedBets(id, table, custom, false);
   let pnl = 0;
   let shooter = 1;
+  let hits: Partial<Record<4 | 5 | 6 | 8 | 9 | 10, number>> = {};
   for (const r of rolls) {
     const full = { ...r, shooter };
+    const before = puck;
     const { bets: nb, delta, call } = settle(bets, puck, full, table);
     bets = nb;
     pnl += delta;
     puck = call.puck;
-    if (call.sevenOut) {
+    if (custom) {
+      const stepped = afterRoll(custom, table, bets, before, call, full, hits);
+      bets = stepped.bets;
+      hits = stepped.hits;
+    } else if (call.sevenOut) {
       shooter += 1;
       bets = reseedAfterSevenOut(id, table, bets, custom);
+    }
+    if (call.sevenOut) {
+      shooter += 1;
+      hits = {};
     }
   }
   return { pnl };
 }
 
-export function customIsValid(c: Pick<CustomStrategy, "name" | "pass" | "dont" | "field" | "place">): string | null {
-  if (!c.name.trim()) return "Name this strategy.";
-  if (c.pass && c.dont) return "Pick Pass or Don't Pass, not both.";
-  if (!c.pass && !c.dont && !c.field && c.place.length === 0) {
-    return "Turn on at least one bet, or use Track only.";
+export function customIsValid(c: CustomStrategy | Omit<CustomStrategy, "id" | "createdAt">): string | null {
+  const m = migrateCustom(c as CustomStrategy);
+  if (!m.name.trim()) return "Name this strategy.";
+  const bets = m.comeout.length + m.point.length;
+  const legacy = m.pass || m.dont || m.field || (m.place && m.place.length > 0);
+  if (!bets && !legacy && m.rules.length === 0) {
+    return "Add a starting bet or an if/when rule, or use Track only.";
   }
   return null;
 }

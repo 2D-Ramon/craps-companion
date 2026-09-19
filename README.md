@@ -27,7 +27,7 @@ Data stays on this device until accounts exist.
 - Tudy’s 12 discipline rules
 - Practice: true-random computer dice, 72-roll strip
 - Template strategies (track, pass+odds, place 6&8, iron cross, don’t pass)
-- Create your own strategy on the Table tab (type or speak; AI fills the bets)
+- Create a strategy: speak until Stop, add more instructions, then Start strategy to preview come-out / point / if-when rules
 - History replay: run up to 5 strategies on the same past dice
 
 ## Next

@@ -37,14 +37,74 @@ export type BuiltinStrategyId =
 /** Built-in id or a saved custom id (`custom-…`). */
 export type StrategyId = BuiltinStrategyId | string;
 
+export type BetKind = "pass" | "dont" | "field" | "place" | "come" | "hard";
+export type BetPhase = "comeout" | "point" | "always";
+
+export type StartBet = {
+  id: string;
+  kind: BetKind;
+  number?: Box;
+  phase: BetPhase;
+  workingComeout: boolean;
+  odds: boolean;
+  units: number;
+};
+
+export type WhenKind =
+  | "comeout"
+  | "pointOn"
+  | "pointSet"
+  | "pointMade"
+  | "sevenOut"
+  | "hit"
+  | "hitsCount"
+  | "roll";
+
+export type StrategyWhen = {
+  kind: WhenKind;
+  number?: number;
+  hits?: number;
+};
+
+export type ActionKind =
+  | "press"
+  | "powerPress"
+  | "regress"
+  | "decrease"
+  | "sameBet"
+  | "takeDown"
+  | "putUp"
+  | "off"
+  | "working"
+  | "reset";
+
+export type StrategyAction = {
+  kind: ActionKind;
+  target: BetKind | "this" | "all";
+  number?: Box;
+  units?: number;
+};
+
+export type StrategyRule = {
+  id: string;
+  when: StrategyWhen;
+  action: StrategyAction;
+  note: string;
+};
+
 export type CustomStrategy = {
   id: string;
   name: string;
-  pass: boolean;
-  dont: boolean;
-  field: boolean;
-  place: Box[];
   createdAt: number;
+  instructions: string[];
+  comeout: StartBet[];
+  point: StartBet[];
+  rules: StrategyRule[];
+  /** Legacy flags from v1 builder. Still honored if comeout/point are empty. */
+  pass?: boolean;
+  dont?: boolean;
+  field?: boolean;
+  place?: Box[];
 };
 
 export type OpenBets = {
@@ -76,6 +136,7 @@ export type Session = {
   lastShooterPnl?: number;
   bankroll: number;
   bets: OpenBets;
+  hitCounts?: Partial<Record<Box, number>>;
   goalHitAt: number | null;
   lossHitAt: number | null;
   notes: string;
