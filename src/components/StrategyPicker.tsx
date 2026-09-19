@@ -28,50 +28,39 @@ export function StrategyPicker({
     <div>
       <p className="text-sm mb-1">Strategy (real money)</p>
       <p className="text-xs text-gold mb-2">Using: {strategyLabel(value, customStrategies)}</p>
-      <div className="space-y-2">
-        {STRATEGIES.map((id) => (
-          <button
-            key={id}
-            type="button"
-            onClick={() => onChange(id)}
-            className={`w-full text-left rounded-xl px-3 py-3 border ${
-              value === id ? "border-gold bg-gold/15" : "border-gold/20 bg-black/20"
-            }`}
-          >
-            <div className="font-semibold">{STRATEGY_LABEL[id]}</div>
-            <div className="text-xs text-muted">{STRATEGY_BLURB[id]}</div>
-          </button>
-        ))}
-        {customStrategies.map((c) => (
-          <div
-            key={c.id}
-            className={`rounded-xl border px-3 py-3 ${
-              value === c.id ? "border-gold bg-gold/15" : "border-gold/20 bg-black/20"
-            }`}
-          >
-            <button type="button" onClick={() => onChange(c.id)} className="w-full text-left">
-              <div className="font-semibold">{c.name}</div>
-              <div className="text-xs text-muted">{describeCustom(c)}</div>
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                if (value === c.id) onChange("place-68");
-                deleteCustom(c.id);
-              }}
-              className="mt-2 text-xs text-danger"
+      {customStrategies.length > 0 && (
+        <div className="space-y-2 mb-3">
+          <p className="text-[10px] uppercase tracking-widest text-muted">Yours</p>
+          {customStrategies.map((c) => (
+            <div
+              key={c.id}
+              className={`rounded-xl border px-3 py-3 ${
+                value === c.id ? "border-gold bg-gold/15" : "border-gold/20 bg-black/20"
+              }`}
             >
-              Delete
-            </button>
-          </div>
-        ))}
-      </div>
-
+              <button type="button" onClick={() => onChange(c.id)} className="w-full text-left">
+                <div className="font-semibold">{c.name}</div>
+                <div className="text-xs text-muted">{describeCustom(c)}</div>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (value === c.id) onChange("place-68");
+                  deleteCustom(c.id);
+                }}
+                className="mt-2 text-xs text-danger"
+              >
+                Delete
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
       {!open ? (
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="mt-3 w-full h-12 rounded-xl border border-gold/40 text-gold font-semibold"
+          className="mb-3 w-full h-12 rounded-xl border border-gold/40 text-gold font-semibold"
         >
           Create a strategy
         </button>
@@ -85,6 +74,25 @@ export function StrategyPicker({
           }}
         />
       )}
+
+      <details className="pit-card p-3">
+        <summary className="text-sm font-semibold cursor-pointer">Templates</summary>
+        <div className="space-y-2 mt-2">
+        {STRATEGIES.map((id) => (
+          <button
+            key={id}
+            type="button"
+            onClick={() => onChange(id)}
+            className={`w-full text-left rounded-xl px-3 py-3 border ${
+              value === id ? "border-gold bg-gold/15" : "border-gold/20 bg-black/20"
+            }`}
+          >
+            <div className="font-semibold">{STRATEGY_LABEL[id]}</div>
+            <div className="text-xs text-muted">{STRATEGY_BLURB[id]}</div>
+          </button>
+        ))}
+        </div>
+      </details>
     </div>
   );
 }

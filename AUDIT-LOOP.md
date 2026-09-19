@@ -5,35 +5,36 @@ Repo: `C:\Users\2D\Projects\Project-4-Craps\web` (GitHub `2D-Ramon/craps-compani
 
 Paste the prompt at the bottom into a new Grok turn. Do not stop until every score is 10, or a score is blocked on a human decision (final wordmark, legal, original photography). Never inflate a 10.
 
-## Current scores (cycle 1, 2026-09-19)
+## Current scores (cycle 2, 2026-09-19)
 
-| Area | Before | After this cycle |
+| Area | Cycle 1 | After cycle 2 |
 |------|------:|------------------|
-| CX (customer experience) | 5.5 | **7.0** |
-| UX | 6.0 | **7.5** |
-| UI | 6.0 | **7.5** |
-| Appearance | 6.5 | **7.5** |
+| CX (customer experience) | 7.0 | **8.0** |
+| UX | 7.5 | **8.0** |
+| UI | 7.5 | **8.0** |
+| Appearance | 7.5 | **8.0** |
 
 ### Cycle 1 shipped
 
-- Buy-in: 3-step how-to; strategy chosen *before* Start; sticky Start names the strategy
-- Live: dice pad immediately after bank/puck (rail glance then tap)
-- Real dice faces on the pad
-- Rules: “How this app works at the rail” above discipline
-- History/stats empty states with a path back to Table; 404 “off the felt”
-- Skip-to-content, focus rings, pit-card / pit-input / pit-btn, nav active underline
-- Header no longer shows a developer version number
+- Buy-in how-to, sticky Start, dice-first live, empty states, pit chrome
+
+### Cycle 2 shipped
+
+- Live **Coach** toggle (default off): one line of what’s on the table right now
+- Light haptic on dice / total tap
+- Strategy builder chips grouped Place / Buy / Lay (not one wrapping soup)
+- Create-a-strategy above templates; yours listed first
+- History cards: pit chrome + last-12 roll strip
 
 ### Still open (next cycle)
 
-- Strategy builder is still dense (many +Place/+Buy/+Lay chips wrap on a phone)
-- Come bets are in the plan but not auto-settled live
-- No in-session “what to bet next” coach line (product said toggle, default off)
-- History list is plain cards, no roll-strip thumbnail
-- Practice vs live still look like two products (black stadium vs felt)
-- No original wordmark; “CRAPS” letter-spacing is a placeholder brand
-- No haptics on dice tap besides goal hit
-- Dark-on-dark selects still imperfect on some Androids
+- Come bets in the plan still not auto-settled live
+- Coach does not walk the *next* if/when (only lists chips + first rule)
+- Strategy preview is still a long form on a phone
+- Practice vs live still two looks (black stadium vs felt) — by design for the pit, but jarring in the same PWA
+- No original wordmark (**blocked**: human brand)
+- No photography (**blocked**)
+- Android `<select>` contrast still weak on some devices
 
 ---
 

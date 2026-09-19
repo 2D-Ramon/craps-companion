@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import { parseInstructions } from "@/lib/parseStrategy";
 import {
   ACTION_OPTIONS,
@@ -526,47 +526,35 @@ function BetSection({
     <div>
       <p className="text-sm font-semibold">{title}</p>
       <p className="text-xs text-muted mb-2">{hint}</p>
-      <div className="flex flex-wrap gap-1 mb-2">
-        {KINDS.map((k) => (
-          <button
-            key={k}
-            type="button"
-            onClick={() => add(k)}
-            className="h-8 px-2 rounded-md text-xs border border-gold/30"
-          >
-            + {kindLabel(k)}
-          </button>
-        ))}
-        {PLACE.map((n) => (
-          <button
-            key={`p${n}`}
-            type="button"
-            onClick={() => add("place", n)}
-            className="h-8 px-2 rounded-md text-xs border border-gold/30"
-          >
-            + Place {n}
-          </button>
-        ))}
-        {BUY.map((n) => (
-          <button
-            key={`b${n}`}
-            type="button"
-            onClick={() => add("buy", n)}
-            className="h-8 px-2 rounded-md text-xs border border-gold/30"
-          >
-            + Buy {n}
-          </button>
-        ))}
-        {PLACE.map((n) => (
-          <button
-            key={`l${n}`}
-            type="button"
-            onClick={() => add("lay", n)}
-            className="h-8 px-2 rounded-md text-xs border border-gold/30"
-          >
-            + Lay {n}
-          </button>
-        ))}
+      <div className="space-y-2 mb-2">
+        <ChipRow label="Line">
+          {KINDS.map((k) => (
+            <Chip key={k} onClick={() => add(k)}>
+              {kindLabel(k)}
+            </Chip>
+          ))}
+        </ChipRow>
+        <ChipRow label="Place">
+          {PLACE.map((n) => (
+            <Chip key={`p${n}`} onClick={() => add("place", n)}>
+              {n}
+            </Chip>
+          ))}
+        </ChipRow>
+        <ChipRow label="Buy">
+          {BUY.map((n) => (
+            <Chip key={`b${n}`} onClick={() => add("buy", n)}>
+              {n}
+            </Chip>
+          ))}
+        </ChipRow>
+        <ChipRow label="Lay">
+          {PLACE.map((n) => (
+            <Chip key={`l${n}`} onClick={() => add("lay", n)}>
+              {n}
+            </Chip>
+          ))}
+        </ChipRow>
       </div>
       <div className="space-y-2">
         {list.length === 0 && <p className="text-xs text-muted">None yet.</p>}
@@ -635,6 +623,27 @@ function BetSection({
         ))}
       </div>
     </div>
+  );
+}
+
+function ChipRow({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="flex items-center gap-2">
+      <span className="w-10 shrink-0 text-[10px] uppercase tracking-widest text-muted">{label}</span>
+      <div className="flex flex-wrap gap-1">{children}</div>
+    </div>
+  );
+}
+
+function Chip({ children, onClick }: { children: ReactNode; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="h-8 min-w-8 px-2 rounded-md text-xs border border-gold/30 bg-black/30"
+    >
+      {children}
+    </button>
   );
 }
 

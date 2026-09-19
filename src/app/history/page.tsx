@@ -68,7 +68,7 @@ export default function HistoryPage() {
               if (live) router.push("/live");
               else setOpenId(s.id);
             }}
-            className="w-full text-left rounded-xl border border-gold/20 bg-black/25 px-3 py-3"
+            className="pit-card w-full text-left px-3 py-3"
           >
             <div className="flex justify-between">
               <span className="font-semibold">{s.casino || "Table"}</span>
@@ -80,6 +80,11 @@ export default function HistoryPage() {
               {strategyLabel(s.strategyId, customStrategies)}
               {live ? " · LIVE" : ""}
             </p>
+            {s.rolls.length > 0 && (
+              <div className="mt-2 pointer-events-none">
+                <RollStrip rolls={s.rolls} n={12} />
+              </div>
+            )}
             {(s.goalHitAt || s.lossHitAt) && (
               <p className="text-xs text-gold mt-1">
                 {s.goalHitAt ? "Win goal hit" : ""}

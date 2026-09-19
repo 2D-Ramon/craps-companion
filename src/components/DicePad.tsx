@@ -16,8 +16,17 @@ export function DicePad({
 }) {
   const [left, setLeft] = useState<Die | null>(null);
 
+  function buzz() {
+    try {
+      navigator.vibrate?.(12);
+    } catch {
+      /* no haptic */
+    }
+  }
+
   function tapDie(n: Die) {
     if (disabled) return;
+    buzz();
     if (left == null) {
       setLeft(n);
       return;
@@ -28,6 +37,7 @@ export function DicePad({
 
   function tapTotal(t: Total) {
     if (disabled) return;
+    buzz();
     setLeft(null);
     onTotal(t);
   }

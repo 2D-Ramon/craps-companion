@@ -6,7 +6,8 @@ import { GlancePercents } from "@/components/GlancePercents";
 import { RollStrip } from "@/components/RollStrip";
 import { money } from "@/lib/format";
 import { puckLabel } from "@/lib/puck";
-import { strategyLabel } from "@/lib/strategies";
+import { coachLine } from "@/lib/coach";
+import { lookupCustom, strategyLabel } from "@/lib/strategies";
 import { useStore } from "@/lib/store";
 import type { Die } from "@/lib/types";
 import { asTotal } from "@/lib/dice";
@@ -27,6 +28,15 @@ export function LiveTable() {
   const [edit, setEdit] = useState(false);
   const [ea, setEa] = useState<Die | "">("");
   const [eb, setEb] = useState<Die | "">("");
+  const [coachOn, setCoachOn] = useState(false);
+
+  useEffect(() => {
+    try {
+      setCoachOn(localStorage.getItem("craps.coach") === "1");
+    } catch {
+      /* ignore */
+    }
+  }, []);
 
   useEffect(() => {
     let lock: WakeLockSentinel | undefined;
@@ -114,10 +124,41 @@ export function LiveTable() {
         <Stat label="Strategy" value={strategyLabel(active.strategyId, customStrategies)} small />
       </div>
 
+      <div className="pit-card p-3">
+        <label className="flex items-center justify-between gap-2 text-sm">
+          <span className="font-semibold">Coach</span>
+          <button
+            type="button"
+            className={`h-8 px-3 rounded-md text-xs font-semibold ${
+              coachOn ? "pit-btn-gold" : "pit-btn"
+            }`}
+            onClick={() => {
+              const next = !coachOn;
+              setCoachOn(next);
+              try {
+                localStorage.setItem("craps.coach", next ? "1" : "0");
+              } catch {
+                /* ignore */
+              }
+            }}
+          >
+            {coachOn ? "On" : "Off"}
+          </button>
+        </label>
+        {coachOn && (
+          <p className="text-sm text-gold mt-2 leading-snug">
+            {coachLine(active, lookupCustom(active.strategyId, customStrategies))}
+          </p>
+        )}
+        {!coachOn && (
+          <p className="text-xs text-muted mt-1">Off until you want a “what’s on the table” line.</p>
+        )}
+      </div>
+
       <DicePad onPair={addPair} onTotal={addTotal} disabled={active.rolls.length >= 200} />
 
       <div className="grid grid-cols-3 gap-2">
-        <button type="button" onClick={undo} className="h-12 rounded-lg bg-black/35 border border-gold/25">
+        <button type="button" onClick={undo} className="pit-btn h-12">
           Undo
         </button>
         <button
@@ -129,7 +170,7 @@ export function LiveTable() {
               setEb((last.b ?? "") as Die | "");
             }
           }}
-          className="h-12 rounded-lg bg-black/35 border border-gold/25"
+          className="pit-btn h-12"
         >
           Edit last
         </button>
