@@ -112,7 +112,7 @@ export function parseStrategyText(raw: string): ParsedStrategy {
   if (has(t, /\boutside\b/)) place = uniqBox([...place, 4, 5, 9, 10]);
 
   const mentioned = numbersIn(t);
-  if (mentioned.length && has(t, /\b(place|put|buy|inside|across|outside|on the|numbers?)\b/)) {
+  if (mentioned.length && has(t, /\b(place|put|inside|across|outside|on the|numbers?)\b/) && !has(t, /\bbuy\b|\blay\b/)) {
     place = uniqBox([...place, ...mentioned]);
   } else if (
     mentioned.length &&
@@ -137,6 +137,16 @@ export function parseStrategyText(raw: string): ParsedStrategy {
   if (field) pushBet(dest, "field", phase);
   for (const n of place) {
     pushBet(dest, "place", phase, { number: n, workingComeout });
+  }
+  if (has(t, /\bbuy\b/)) {
+    const nums = mentioned.length ? mentioned : uniqBox([4, 10]);
+    for (const n of nums.filter((x) => x === 4 || x === 5 || x === 9 || x === 10)) {
+      pushBet(dest, "buy", phase, { number: n, workingComeout });
+    }
+  }
+  if (has(t, /\blay\b/)) {
+    const nums = mentioned.length ? mentioned : BOXES;
+    for (const n of nums) pushBet(dest, "lay", phase, { number: n, workingComeout });
   }
   if (has(t, /\bcome\s+bet\b/) || has(t, /\bcome\s+bets\b/)) {
     pushBet(point, "come", "point", { odds: true });

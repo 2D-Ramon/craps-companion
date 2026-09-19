@@ -28,7 +28,9 @@ import type {
 } from "@/lib/types";
 
 const PLACE: Box[] = [4, 5, 6, 8, 9, 10];
-const KINDS: BetKind[] = ["pass", "dont", "field", "place", "come", "hard"];
+const BUY: Box[] = [4, 5, 9, 10];
+const ROLLS = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+const KINDS: BetKind[] = ["pass", "dont", "field", "come"];
 
 type SpeechRec = {
   lang: string;
@@ -36,7 +38,7 @@ type SpeechRec = {
   continuous: boolean;
   onresult: (ev: {
     resultIndex: number;
-    results: { [i: number]: { isFinal: boolean; 0: { transcript: string } } };
+    results: { length: number; [i: number]: { isFinal: boolean; 0: { transcript: string } } };
   }) => void;
   onerror: () => void;
   onend: () => void;
@@ -45,9 +47,11 @@ type SpeechRec = {
 };
 
 export function StrategyBuilder({
+  tableMin,
   onCancel,
   onSaved,
 }: {
+  tableMin: number;
   onCancel: () => void;
   onSaved: (id: StrategyId) => void;
 }) {
@@ -65,13 +69,40 @@ export function StrategyBuilder({
   const [rules, setRules] = useState<StrategyRule[]>([]);
   const wantListen = useRef(false);
   const recRef = useRef<SpeechRec | null>(null);
+  const committedRef = useRef("");
+  const interimRef = useRef("");
+  const seenFinals = useRef(0);
+
+  function joinSpeech(prev: string, next: string): string {
+    const n = next.trim();
+    const p = prev.trim();
+    if (!n) return p;
+    if (!p) return n;
+    if (p.endsWith(n)) return p;
+    if (n.startsWith(p)) return n;
+    const last = p.split(" ").slice(-8).join(" ");
+    if (n.startsWith(last) && last.length > 0) {
+      return `${p.slice(0, p.length - last.length)}${n}`.replace(/\s+/g, " ").trim();
+    }
+    return `${p} ${n}`.replace(/\s+/g, " ").trim();
+  }
 
   function stopListen() {
     wantListen.current = false;
-    recRef.current?.stop();
+    try {
+      recRef.current?.stop();
+    } catch {
+      /* already stopped */
+    }
     recRef.current = null;
-    setListening(false);
+    const leftover = interimRef.current.trim();
+    if (leftover) {
+      committedRef.current = joinSpeech(committedRef.current, leftover);
+      setClip(committedRef.current);
+    }
+    interimRef.current = "";
     setInterim("");
+    setListening(false);
   }
 
   function startListen() {
@@ -84,51 +115,51 @@ export function StrategyBuilder({
       setErr("This browser can't listen. Type the instruction instead.");
       return;
     }
-    stopListen();
+    if (listening) return;
+    committedRef.current = clip;
+    seenFinals.current = 0;
     wantListen.current = true;
     const rec = new Ctor();
     rec.lang = "en-US";
     rec.interimResults = true;
     rec.continuous = true;
     rec.onresult = (ev) => {
-      let finals = "";
+      const results = ev.results;
+      if (results.length < seenFinals.current) seenFinals.current = 0;
       let mid = "";
-      for (let i = ev.resultIndex; i < 40; i++) {
-        const row = ev.results[i];
-        if (!row) break;
-        if (row.isFinal) finals += `${row[0].transcript} `;
-        else mid = row[0].transcript;
+      for (let i = seenFinals.current; i < results.length; i++) {
+        const row = results[i];
+        const said = row[0]?.transcript ?? "";
+        if (row.isFinal) {
+          committedRef.current = joinSpeech(committedRef.current, said);
+          seenFinals.current = i + 1;
+          setClip(committedRef.current);
+        } else {
+          mid += said;
+        }
       }
-      if (finals.trim()) {
-        setClip((c) => `${c} ${finals}`.replace(/\s+/g, " ").trim());
-      }
+      interimRef.current = mid;
       setInterim(mid);
     };
     rec.onerror = () => {
-      if (wantListen.current) {
-        try {
-          rec.start();
-        } catch {
-          setListening(false);
-        }
-      } else {
-        setListening(false);
-      }
+      /* keep listening until Stop; onend will restart */
     };
     rec.onend = () => {
-      if (wantListen.current) {
-        try {
-          rec.start();
-        } catch {
-          setListening(false);
-        }
-      } else {
-        setListening(false);
+      if (!wantListen.current) {
         recRef.current = null;
+        setListening(false);
+        return;
+      }
+      seenFinals.current = 0;
+      try {
+        rec.start();
+      } catch {
+        setListening(false);
       }
     };
     recRef.current = rec;
     setListening(true);
+    setErr("");
     rec.start();
   }
 
@@ -140,6 +171,7 @@ export function StrategyBuilder({
     }
     stopListen();
     setClips((c) => [...c, text]);
+    committedRef.current = "";
     setClip("");
     setInterim("");
     setErr("");
@@ -225,6 +257,7 @@ export function StrategyBuilder({
       <Preview
         name={name}
         setName={setName}
+        tableMin={tableMin}
         comeout={comeout}
         setComeout={setComeout}
         point={point}
@@ -281,8 +314,11 @@ export function StrategyBuilder({
       <label className="block text-sm">
         {clips.length ? "Next instruction" : "Instruction"}
         <textarea
-          value={interim ? `${clip} ${interim}`.trim() : clip}
+          value={listening && interim ? `${clip} ${interim}`.trim() : clip}
+          readOnly={listening}
           onChange={(e) => {
+            if (listening) return;
+            committedRef.current = e.target.value;
             setClip(e.target.value);
             setInterim("");
           }}
@@ -330,6 +366,7 @@ export function StrategyBuilder({
 function Preview({
   name,
   setName,
+  tableMin,
   comeout,
   setComeout,
   point,
@@ -344,6 +381,7 @@ function Preview({
 }: {
   name: string;
   setName: (v: string) => void;
+  tableMin: number;
   comeout: StartBet[];
   setComeout: (v: StartBet[]) => void;
   point: StartBet[];
@@ -383,17 +421,19 @@ function Preview({
 
       <BetSection
         title="Starting bets — come out (puck off)"
-        hint="Pass / Don't usually live here. Place bets only if you want them working on come out."
+        hint="Pass / Don't usually live here. Set a dollar amount on each bet. Buy/lay/place can work on come out if you check that box."
         list={comeout}
         setList={setComeout}
         defaultPhase="comeout"
+        tableMin={tableMin}
       />
       <BetSection
         title="Starting bets — point is on"
-        hint="Place, field, come after a point is established. Odds can ride the line bets."
+        hint="Place, buy 4/5/9/10, lay, field, come after a point is established."
         list={point}
         setList={setPoint}
         defaultPhase="point"
+        tableMin={tableMin}
       />
 
       <div>
@@ -407,7 +447,7 @@ function Preview({
                 ...rules,
                 {
                   id: rid(),
-                  when: { kind: "hit", number: 6 },
+                  when: { kind: "hit", numbers: [6, 8] },
                   action: { kind: "press", target: "place", number: 6 },
                   note: "",
                 },
@@ -418,8 +458,8 @@ function Preview({
           </button>
         </div>
         <p className="text-xs text-muted mb-2">
-          Examples: if 6 hits, press. After 2 hits, regress to min. On seven-out, reset. When point
-          is set, put up the 8.
+          Pick one or more rolls 2–12. “After this many hits” means after that count of hits on the
+          numbers you selected (example: after 2 hits on 6 and 8).
         </p>
         <div className="space-y-2">
           {rules.length === 0 && (
@@ -462,22 +502,32 @@ function BetSection({
   list,
   setList,
   defaultPhase,
+  tableMin,
 }: {
   title: string;
   hint: string;
   list: StartBet[];
   setList: (v: StartBet[]) => void;
   defaultPhase: BetPhase;
+  tableMin: number;
 }) {
   function add(kind: BetKind, number?: Box) {
-    setList([...list, startBet(kind, defaultPhase, { number, workingComeout: defaultPhase === "comeout" && kind === "place" })]);
+    setList([
+      ...list,
+      startBet(kind, defaultPhase, {
+        number,
+        dollars: tableMin,
+        workingComeout:
+          defaultPhase === "comeout" && (kind === "place" || kind === "buy" || kind === "lay"),
+      }),
+    ]);
   }
   return (
     <div>
       <p className="text-sm font-semibold">{title}</p>
       <p className="text-xs text-muted mb-2">{hint}</p>
       <div className="flex flex-wrap gap-1 mb-2">
-        {KINDS.filter((k) => k !== "place" && k !== "hard").map((k) => (
+        {KINDS.map((k) => (
           <button
             key={k}
             type="button"
@@ -489,12 +539,32 @@ function BetSection({
         ))}
         {PLACE.map((n) => (
           <button
-            key={n}
+            key={`p${n}`}
             type="button"
             onClick={() => add("place", n)}
             className="h-8 px-2 rounded-md text-xs border border-gold/30"
           >
             + Place {n}
+          </button>
+        ))}
+        {BUY.map((n) => (
+          <button
+            key={`b${n}`}
+            type="button"
+            onClick={() => add("buy", n)}
+            className="h-8 px-2 rounded-md text-xs border border-gold/30"
+          >
+            + Buy {n}
+          </button>
+        ))}
+        {PLACE.map((n) => (
+          <button
+            key={`l${n}`}
+            type="button"
+            onClick={() => add("lay", n)}
+            className="h-8 px-2 rounded-md text-xs border border-gold/30"
+          >
+            + Lay {n}
           </button>
         ))}
       </div>
@@ -514,20 +584,22 @@ function BetSection({
                 Remove
               </button>
             </div>
-            <div className="flex flex-wrap gap-2 text-xs">
+            <div className="flex flex-wrap gap-2 text-xs items-center">
               <label className="flex items-center gap-1">
-                Units
+                $
                 <input
                   inputMode="numeric"
-                  value={b.units}
+                  value={b.dollars ?? tableMin}
                   onChange={(e) =>
                     setList(
                       list.map((x) =>
-                        x.id === b.id ? { ...x, units: Math.max(1, Number(e.target.value) || 1) } : x,
+                        x.id === b.id
+                          ? { ...x, dollars: Math.max(1, Number(e.target.value) || tableMin) }
+                          : x,
                       ),
                     )
                   }
-                  className="w-10 h-7 rounded bg-black/40 border border-gold/20 px-1"
+                  className="w-16 h-7 rounded bg-black/40 border border-gold/20 px-1"
                 />
               </label>
               {(b.kind === "pass" || b.kind === "dont" || b.kind === "come") && (
@@ -542,7 +614,7 @@ function BetSection({
                   Odds
                 </label>
               )}
-              {b.kind === "place" && (
+              {(b.kind === "place" || b.kind === "buy" || b.kind === "lay") && (
                 <label className="flex items-center gap-1">
                   <input
                     type="checkbox"
@@ -602,26 +674,39 @@ function RuleRow({
         </select>
       </label>
       {(when.kind === "hit" || when.kind === "hitsCount" || when.kind === "roll") && (
-        <label className="block text-xs">
-          Number
-          <select
-            value={when.number ?? 6}
-            onChange={(e) =>
-              onChange({ ...rule, when: { ...when, number: Number(e.target.value) } })
-            }
-            className="mt-1 w-full h-9 rounded bg-black/40 border border-gold/20 px-2"
-          >
-            {(when.kind === "roll" ? [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12] : PLACE).map((n) => (
-              <option key={n} value={n}>
-                {n}
-              </option>
-            ))}
-          </select>
-        </label>
+        <div>
+          <p className="text-xs mb-1">Numbers (tap all that apply, 2–12)</p>
+          <div className="grid grid-cols-6 gap-1">
+            {ROLLS.map((n) => {
+              const on = (when.numbers?.length ? when.numbers : when.number != null ? [when.number] : []).includes(n);
+              return (
+                <button
+                  key={n}
+                  type="button"
+                  onClick={() => {
+                    const cur = when.numbers?.length
+                      ? [...when.numbers]
+                      : when.number != null
+                        ? [when.number]
+                        : [];
+                    const next = cur.includes(n) ? cur.filter((x) => x !== n) : [...cur, n].sort((a, b) => a - b);
+                    onChange({
+                      ...rule,
+                      when: { ...when, numbers: next, number: next[0] },
+                    });
+                  }}
+                  className={`h-8 rounded-md text-xs ${on ? "bg-gold text-felt-deep" : "bg-black/40"}`}
+                >
+                  {n}
+                </button>
+              );
+            })}
+          </div>
+        </div>
       )}
       {when.kind === "hitsCount" && (
         <label className="block text-xs">
-          After how many hits
+          After this many hits (example: 2)
           <input
             inputMode="numeric"
             value={when.hits ?? 2}
@@ -653,16 +738,22 @@ function RuleRow({
           Target
           <select
             value={
-              action.target === "place" && action.number
-                ? `place-${action.number}`
+              (action.target === "place" || action.target === "buy" || action.target === "lay") &&
+              action.number
+                ? `${action.target}-${action.number}`
                 : action.target
             }
             onChange={(e) => {
               const v = e.target.value;
-              if (v.startsWith("place-")) {
+              if (v.startsWith("place-") || v.startsWith("buy-") || v.startsWith("lay-")) {
+                const [kind, num] = v.split("-");
                 onChange({
                   ...rule,
-                  action: { ...action, target: "place", number: Number(v.slice(6)) as Box },
+                  action: {
+                    ...action,
+                    target: kind as StrategyAction["target"],
+                    number: Number(num) as Box,
+                  },
                 });
               } else {
                 onChange({
@@ -679,8 +770,18 @@ function RuleRow({
             <option value="dont">Don&apos;t Pass</option>
             <option value="field">Field</option>
             {PLACE.map((n) => (
-              <option key={n} value={`place-${n}`}>
+              <option key={`p${n}`} value={`place-${n}`}>
                 Place {n}
+              </option>
+            ))}
+            {BUY.map((n) => (
+              <option key={`b${n}`} value={`buy-${n}`}>
+                Buy {n}
+              </option>
+            ))}
+            {PLACE.map((n) => (
+              <option key={`l${n}`} value={`lay-${n}`}>
+                Lay {n}
               </option>
             ))}
           </select>

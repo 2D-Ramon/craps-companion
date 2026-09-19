@@ -111,6 +111,8 @@ export function reseedAfterSevenOut(
 ): OpenBets {
   const seed = seedBets(id, table, custom, false);
   bets.place = seed.place;
+  bets.buy = seed.buy;
+  bets.lay = seed.lay;
   bets.field = seed.field;
   bets.pass = seed.pass;
   bets.dont = seed.dont;

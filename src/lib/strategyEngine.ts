@@ -87,6 +87,7 @@ export function startBet(
     workingComeout: extra.workingComeout ?? false,
     odds: extra.odds ?? (kind === "pass" || kind === "dont" || kind === "come"),
     units: extra.units ?? 1,
+    dollars: extra.dollars,
     number: extra.number,
   };
 }
@@ -96,6 +97,8 @@ export function kindLabel(kind: BetKind, number?: number): string {
   if (kind === "dont") return "Don't Pass";
   if (kind === "field") return "Field";
   if (kind === "come") return "Come";
+  if (kind === "buy") return `Buy ${number ?? ""}`.trim();
+  if (kind === "lay") return `Lay ${number ?? ""}`.trim();
   if (kind === "hard") return `Hard ${number ?? ""}`.trim();
   return `Place ${number ?? ""}`.trim();
 }
@@ -106,17 +109,25 @@ export function phaseLabel(p: BetPhase): string {
   return "Always";
 }
 
+export function whenNumbers(w: StrategyWhen): number[] {
+  if (w.numbers?.length) return w.numbers;
+  if (w.number != null) return [w.number];
+  return [];
+}
+
 export function whenLabel(w: StrategyWhen): string {
+  const nums = whenNumbers(w);
+  const ntxt = nums.length ? nums.join(", ") : "a number";
   if (w.kind === "comeout") return "On come out";
   if (w.kind === "pointOn") return "While point is on";
   if (w.kind === "pointSet") return "When the point is set";
   if (w.kind === "pointMade") return "When the point is made";
   if (w.kind === "sevenOut") return "On seven-out";
-  if (w.kind === "hit") return `If ${w.number ?? "a number"} hits`;
+  if (w.kind === "hit") return `If ${ntxt} hits`;
   if (w.kind === "hitsCount") {
-    return `After ${w.hits ?? 2} hits on ${w.number ?? "a number"}`;
+    return `After ${w.hits ?? 2} hits on ${ntxt}`;
   }
-  if (w.kind === "roll") return `If the roll is ${w.number ?? "?"}`;
+  if (w.kind === "roll") return `If the roll is ${ntxt}`;
   return "When";
 }
 
@@ -165,8 +176,11 @@ function placeUnit(box: Box, min: number): number {
 }
 
 export function betAmount(b: StartBet, table: TableRules): number {
+  if (b.dollars && b.dollars > 0) return Math.round(b.dollars);
   const u = Math.max(1, b.units || 1);
-  if (b.kind === "place" && b.number) return placeUnit(b.number, table.min) * u;
+  if ((b.kind === "place" || b.kind === "buy" || b.kind === "lay") && b.number) {
+    return placeUnit(b.number, table.min) * u;
+  }
   return table.min * u;
 }
 
@@ -175,7 +189,13 @@ function applyStartList(bets: OpenBets, list: StartBet[], table: TableRules, puc
     const onComeout = !puckOn;
     if (b.phase === "point" && onComeout) continue;
     if (b.phase === "comeout" && puckOn && b.kind !== "pass" && b.kind !== "dont") continue;
-    if (b.kind === "place" && onComeout && !b.workingComeout && b.phase !== "comeout" && b.phase !== "always") {
+    if (
+      (b.kind === "place" || b.kind === "buy" || b.kind === "lay") &&
+      onComeout &&
+      !b.workingComeout &&
+      b.phase !== "comeout" &&
+      b.phase !== "always"
+    ) {
       continue;
     }
     const amt = betAmount(b, table);
@@ -183,6 +203,8 @@ function applyStartList(bets: OpenBets, list: StartBet[], table: TableRules, puc
     if (b.kind === "dont") bets.dont = amt;
     if (b.kind === "field") bets.field = amt;
     if (b.kind === "place" && b.number) bets.place[b.number] = amt;
+    if (b.kind === "buy" && b.number) bets.buy[b.number] = amt;
+    if (b.kind === "lay" && b.number) bets.lay[b.number] = amt;
   }
 }
 
@@ -233,16 +255,21 @@ function matchWhen(
   if (w.kind === "pointSet") return !puckBefore.on && call.puck.on;
   if (w.kind === "pointMade") return Boolean(call.pointMade);
   if (w.kind === "sevenOut") return Boolean(call.sevenOut);
-  if (w.kind === "roll") return roll.total === w.number;
+  if (w.kind === "roll") {
+    const nums = whenNumbers(w);
+    return nums.length ? nums.includes(roll.total) : roll.total === w.number;
+  }
   if (w.kind === "hit") {
-    const n = w.number as Box | undefined;
-    if (!n || !BOXES.includes(n)) return BOXES.includes(roll.total as Box);
-    return roll.total === n;
+    const nums = whenNumbers(w);
+    if (nums.length) return nums.includes(roll.total);
+    return BOXES.includes(roll.total as Box);
   }
   if (w.kind === "hitsCount") {
-    const n = w.number as Box | undefined;
-    if (!n) return false;
-    return (hits[n] ?? 0) >= (w.hits ?? 2) && roll.total === n;
+    const nums = whenNumbers(w);
+    if (!nums.length) return false;
+    if (!nums.includes(roll.total)) return false;
+    const totalHits = nums.reduce((sum, n) => sum + (hits[n as Box] ?? 0), 0);
+    return totalHits >= (w.hits ?? 2);
   }
   return false;
 }
@@ -262,6 +289,8 @@ function applyAction(
     bets.dont = fresh.dont;
     bets.field = fresh.field;
     bets.place = fresh.place;
+    bets.buy = fresh.buy;
+    bets.lay = fresh.lay;
     bets.passOdds = puckOn ? bets.passOdds : 0;
     bets.dontOdds = puckOn ? bets.dontOdds : 0;
     return;
@@ -273,7 +302,13 @@ function applyAction(
     if ((a.target === "place" || a.target === "this" || a.target === "all") && box) {
       delete bets.place[box];
     }
-    if (a.target === "all") bets.place = {};
+    if (a.target === "all") {
+      bets.place = {};
+      bets.buy = {};
+      bets.lay = {};
+    }
+    if (a.target === "buy" && box) delete bets.buy[box];
+    if (a.target === "lay" && box) delete bets.lay[box];
     return;
   }
   if (a.kind === "putUp" && box) {
@@ -308,6 +343,8 @@ export function afterRoll(
   const next: OpenBets = {
     ...bets,
     place: { ...bets.place },
+    buy: { ...(bets.buy ?? {}) },
+    lay: { ...(bets.lay ?? {}) },
   };
   const nextHits: HitMap = { ...hits };
   const box = roll.total as Box;
@@ -348,7 +385,7 @@ export const WHEN_OPTIONS: { id: WhenKind; label: string }[] = [
   { id: "pointSet", label: "When point is set" },
   { id: "pointOn", label: "While point is on" },
   { id: "hit", label: "If a number hits" },
-  { id: "hitsCount", label: "After N hits on a number" },
+  { id: "hitsCount", label: "After this many hits" },
   { id: "roll", label: "If the roll is" },
   { id: "pointMade", label: "When point is made" },
   { id: "sevenOut", label: "On seven-out" },

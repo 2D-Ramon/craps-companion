@@ -48,6 +48,7 @@ function hydrateBets(raw: unknown): StartBet[] {
       workingComeout: Boolean(b.workingComeout),
       odds: Boolean(b.odds),
       units: Number(b.units) || 1,
+      dollars: b.dollars != null ? Number(b.dollars) : undefined,
     }),
   );
 }
@@ -62,6 +63,11 @@ function hydrateRules(raw: unknown): StrategyRule[] {
       when: {
         kind: (when.kind as StrategyRule["when"]["kind"]) || "hit",
         number: when.number != null ? Number(when.number) : undefined,
+        numbers: Array.isArray(when.numbers)
+          ? when.numbers.map(Number)
+          : when.number != null
+            ? [Number(when.number)]
+            : undefined,
         hits: when.hits != null ? Number(when.hits) : undefined,
       },
       action: {

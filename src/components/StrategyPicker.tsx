@@ -10,9 +10,11 @@ import type { StrategyId } from "@/lib/types";
 export function StrategyPicker({
   value,
   onChange,
+  tableMin = 10,
 }: {
   value: StrategyId;
   onChange: (id: StrategyId) => void;
+  tableMin?: number;
 }) {
   const { customStrategies, deleteCustom } = useStore();
   const [open, setOpen] = useState(false);
@@ -69,6 +71,7 @@ export function StrategyPicker({
         </button>
       ) : (
         <StrategyBuilder
+          tableMin={tableMin}
           onCancel={() => setOpen(false)}
           onSaved={(id) => {
             onChange(id);

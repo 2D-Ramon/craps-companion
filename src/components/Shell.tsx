@@ -17,7 +17,7 @@ const TABS = [
 export function Shell({ children }: { children: React.ReactNode }) {
   const path = usePathname();
   const { active } = useStore();
-  const ver = "v8";
+  const ver = "v9";
   const practice = path === "/practice";
   const prev = useRef(path);
   useEffect(() => {

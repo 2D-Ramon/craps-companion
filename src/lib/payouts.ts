@@ -2,7 +2,16 @@ import type { Box, OpenBets, Puck, Roll, TableRules, Total } from "./types";
 import { applyRoll, type RollCall } from "./puck";
 
 export function emptyBets(): OpenBets {
-  return { pass: 0, passOdds: 0, dont: 0, dontOdds: 0, place: {}, field: 0 };
+  return {
+    pass: 0,
+    passOdds: 0,
+    dont: 0,
+    dontOdds: 0,
+    place: {},
+    buy: {},
+    lay: {},
+    field: 0,
+  };
 }
 
 function oddsMultiple(point: Box, table: TableRules): number {
@@ -75,6 +84,8 @@ export function settle(
     dont: bets.dont,
     dontOdds: bets.dontOdds,
     place: { ...bets.place },
+    buy: { ...(bets.buy ?? {}) },
+    lay: { ...(bets.lay ?? {}) },
     field: bets.field,
   };
 
@@ -90,6 +101,19 @@ export function settle(
     if (call.natural) {
       delta += bets.pass;
       delta -= bets.dont;
+      if (roll.total === 7) {
+        for (const k of Object.keys(next.buy)) {
+          const box = Number(k) as Box;
+          delta -= next.buy[box] ?? 0;
+        }
+        for (const k of Object.keys(next.lay)) {
+          const box = Number(k) as Box;
+          const amt = next.lay[box] ?? 0;
+          if (amt) delta += layPays(box, amt);
+        }
+        next.buy = {};
+        next.lay = {};
+      }
     } else if (call.craps) {
       if (roll.total === 12) {
         delta -= bets.pass;
@@ -116,6 +140,13 @@ export function settle(
     next.dontOdds = 0;
     const hit = next.place[point];
     if (hit) delta += placePays(point, hit);
+    const buyHit = next.buy[point];
+    if (buyHit) delta += buyPays(point, buyHit);
+    const layHit = next.lay[point];
+    if (layHit) {
+      delta -= layHit;
+      delete next.lay[point];
+    }
   } else if (call.sevenOut) {
     delta -= bets.pass;
     delta -= bets.passOdds;
@@ -128,11 +159,29 @@ export function settle(
       delta -= next.place[box] ?? 0;
     }
     next.place = {};
+    for (const k of Object.keys(next.buy)) {
+      const box = Number(k) as Box;
+      delta -= next.buy[box] ?? 0;
+    }
+    next.buy = {};
+    for (const k of Object.keys(next.lay)) {
+      const box = Number(k) as Box;
+      const amt = next.lay[box] ?? 0;
+      if (amt) delta += layPays(box, amt);
+    }
+    next.lay = {};
   } else {
     const box = roll.total;
     if (box === 4 || box === 5 || box === 6 || box === 8 || box === 9 || box === 10) {
       const amt = next.place[box];
       if (amt) delta += placePays(box, amt);
+      const buyAmt = next.buy[box];
+      if (buyAmt) delta += buyPays(box, buyAmt);
+      const layAmt = next.lay[box];
+      if (layAmt) {
+        delta -= layAmt;
+        delete next.lay[box];
+      }
     }
   }
 

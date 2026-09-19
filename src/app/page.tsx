@@ -176,7 +176,11 @@ export default function HomePage() {
         Start session
       </button>
 
-      <StrategyPicker value={strategyId} onChange={setStrategyId} />
+      <StrategyPicker
+        value={strategyId}
+        onChange={setStrategyId}
+        tableMin={Number(min) || 10}
+      />
 
       <div className="rounded-xl border border-gold/20 bg-black/20 p-3 space-y-2">
         <p className="text-sm font-semibold">Field pays</p>

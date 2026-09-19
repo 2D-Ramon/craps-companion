@@ -37,7 +37,7 @@ export type BuiltinStrategyId =
 /** Built-in id or a saved custom id (`custom-…`). */
 export type StrategyId = BuiltinStrategyId | string;
 
-export type BetKind = "pass" | "dont" | "field" | "place" | "come" | "hard";
+export type BetKind = "pass" | "dont" | "field" | "place" | "buy" | "lay" | "come" | "hard";
 export type BetPhase = "comeout" | "point" | "always";
 
 export type StartBet = {
@@ -48,6 +48,8 @@ export type StartBet = {
   workingComeout: boolean;
   odds: boolean;
   units: number;
+  /** Exact dollar wager. If set, this is what goes on the table. */
+  dollars?: number;
 };
 
 export type WhenKind =
@@ -63,6 +65,8 @@ export type WhenKind =
 export type StrategyWhen = {
   kind: WhenKind;
   number?: number;
+  /** Totals 2–12. Used when more than one number should trigger the rule. */
+  numbers?: number[];
   hits?: number;
 };
 
@@ -113,6 +117,8 @@ export type OpenBets = {
   dont: number;
   dontOdds: number;
   place: Partial<Record<Box, number>>;
+  buy: Partial<Record<Box, number>>;
+  lay: Partial<Record<Box, number>>;
   field: number;
 };
 
