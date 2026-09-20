@@ -289,6 +289,12 @@ button {
   display: flex;
   flex-direction: column;
   margin-left: 2px;
+  line-height: 1;
+}
+
+.hud-total span {
+  letter-spacing: 0.06em;
+  white-space: nowrap;
 }
 
 .hud-total b {
@@ -334,7 +340,7 @@ button {
   flex-shrink: 0;
   padding: 1px 0 2px;
   min-height: 36px;
-  max-height: 42px;
+  max-height: 46px;
   -webkit-overflow-scrolling: touch;
 }
 .roll-ticker-empty {
@@ -351,11 +357,19 @@ button {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 2px 1px;
+  padding: 1px 1px 2px;
   background: #111;
 }
+.roll-tick-r {
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #8a8a8a;
+  line-height: 1;
+}
 .roll-tick-n {
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 800;
   line-height: 1;
 }

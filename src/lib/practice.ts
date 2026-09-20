@@ -55,6 +55,21 @@ export function layMinBet(box: Box, tableMin: number): number {
   return layIncrement(box, tableMin);
 }
 
+/** 1-based count of rolls in the current shooter hand (resets after a 7-out). */
+export function handRollSinceSevenOut(rolls: Roll[], shooter: number, rolling = false): number {
+  const count = (s: number) => {
+    let n = 0;
+    for (let i = rolls.length - 1; i >= 0; i--) {
+      if (rolls[i].shooter !== s) break;
+      n += 1;
+    }
+    return n;
+  };
+  if (rolling) return count(shooter) + 1;
+  if (!rolls.length) return 0;
+  return count(rolls[rolls.length - 1].shooter);
+}
+
 /** 3-4-5x: pass/come odds max. Don't/DC odds max is 6x the line (same win cap). */
 export function maxOdds(point: Box, line: number, laying: boolean): number {
   const flat = Math.max(0, line);
@@ -1003,10 +1018,22 @@ export function usePractice() {
         at: Date.now(),
         shooter: cur.shooter,
       };
+      let handRoll = 1;
+      for (let i = cur.rolls.length - 1; i >= 0; i--) {
+        if (cur.rolls[i].shooter !== cur.shooter) break;
+        handRoll += 1;
+      }
       settled.rolls = [...cur.rolls, roll].slice(-MAX_ROLLS);
       settled.log = [
         ...(cur.log || []),
-        { a: pair.a, b: pair.b, total: pair.total, delta: settled.lastDelta, at: Date.now() },
+        {
+          a: pair.a,
+          b: pair.b,
+          total: pair.total,
+          delta: settled.lastDelta,
+          at: Date.now(),
+          handRoll,
+        },
       ].slice(-MAX_LOG);
       const sign = settled.lastDelta > 0 ? "+" : settled.lastDelta < 0 ? "-" : "";
       settled.msg = `This roll ${sign}$${Math.abs(Math.round(settled.lastDelta))}`;

@@ -275,6 +275,8 @@ export type PracticeLog = {
   total: Total;
   delta: number;
   at: number;
+  /** 1-based roll of this shooter since the last 7-out. */
+  handRoll?: number;
 };
 
 export type PracticeState = {

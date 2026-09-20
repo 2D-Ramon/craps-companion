@@ -7,7 +7,7 @@ import { DiceFace } from "@/components/DiceFace";
 import { GlancePercents } from "@/components/GlancePercents";
 import { PracticeFelt } from "@/components/PracticeFelt";
 import { RollStrip } from "@/components/RollStrip";
-import { CHIP_VALUES, TABLE_MINS, betsOnTable, usePractice } from "@/lib/practice";
+import { CHIP_VALUES, TABLE_MINS, betsOnTable, handRollSinceSevenOut, usePractice } from "@/lib/practice";
 import { trueDie } from "@/lib/dice";
 import { money } from "@/lib/format";
 import type { Die } from "@/lib/types";
@@ -50,6 +50,9 @@ export function PracticeTable() {
   const pl = state.lastDelta;
   const overall = state.bank + onTable - (state.buyIn || 0);
   const paused = state.paused;
+  const handRoll = last
+    ? handRollSinceSevenOut(state.rolls, state.shooter, rolling)
+    : 0;
 
   useEffect(() => {
     let sentinel: WakeLockSentinel | undefined;
@@ -188,6 +191,7 @@ export function PracticeTable() {
               <DiceFace n={last.a} size={34} rolling={rolling} />
               <DiceFace n={last.b} size={34} rolling={rolling} />
               <div className="hud-total">
+                <span>Roll {handRoll}</span>
                 <b className={state.last?.total === 7 && !rolling ? "text-seven" : ""}>
                   {last.a + last.b}
                 </b>
@@ -225,6 +229,7 @@ export function PracticeTable() {
               key={`${r.at}-${i}`}
               className={`roll-tick ${r.delta > 0 ? "win" : r.delta < 0 ? "loss" : ""} ${r.total === 7 ? "seven" : ""}`}
             >
+              {r.handRoll ? <span className="roll-tick-r">R{r.handRoll}</span> : null}
               <span className="roll-tick-n">{r.total}</span>
               <span className="roll-tick-amt">{money(r.delta, true)}</span>
             </div>
