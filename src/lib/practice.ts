@@ -55,6 +55,13 @@ export function layMinBet(box: Box, tableMin: number): number {
   return layIncrement(box, tableMin);
 }
 
+/** Buy 4 and 10 start at $20 (vig unit). Other buys use table min. */
+export function buyMinBet(box: Box, tableMin: number): number {
+  const min = Math.max(1, Math.round(tableMin));
+  if (box === 4 || box === 10) return Math.max(20, min);
+  return min;
+}
+
 /** 1-based count of rolls in the current shooter hand (resets after a 7-out). */
 export function handRollSinceSevenOut(rolls: Roll[], shooter: number, rolling = false): number {
   const count = (s: number) => {
@@ -857,11 +864,12 @@ function placeChip(next: PracticeState, spot: PracticeSpot, chip: number, exact 
     const box = boxFromSpot(spot, "place");
     amt = placeIncrement(box, chip);
     if (!have) amt = Math.max(amt, placeIncrement(box, min));
+  } else if (spot.startsWith("buy")) {
+    const box = boxFromSpot(spot, "buy");
+    if (!have) amt = Math.max(amt, buyMinBet(box, min));
   } else if (
     !have &&
-    (spot.startsWith("buy") ||
-      (spot.startsWith("lay") && !spot.startsWith("layOdds")) ||
-      LINE_SPOTS.includes(spot))
+    ((spot.startsWith("lay") && !spot.startsWith("layOdds")) || LINE_SPOTS.includes(spot))
   ) {
     amt = Math.max(amt, min);
   }
