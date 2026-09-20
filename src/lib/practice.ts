@@ -36,23 +36,13 @@ export const PRACTICE_TABLE: TableRules = {
 export const CHIP_VALUES = [1, 5, 10, 25, 100, 500] as const;
 export const TABLE_MINS = [5, 10, 15, 25] as const;
 
-/** Place 6/8 in $6 units so 7:6 pays a whole dollar. $5 → $6, $10 → $12. */
-export function placeIncrement(box: Box, chip: number): number {
-  const n = Math.max(1, Math.round(chip));
-  if (box === 6 || box === 8) return Math.max(6, Math.round((n * 6) / 5));
-  return n;
+/** Chip face value is the wager. Odds may still cap at 3-4-5x. */
+export function placeIncrement(_box: Box, chip: number): number {
+  return Math.max(1, Math.round(chip));
 }
 
-/**
- * Lay is the opposite of place: you bet more than you win, and the WIN must
- * meet the table min. 4/10 pays 1:2, 5/9 pays 2:3, 6/8 pays 5:6.
- * $5 min → lay 4/10 $10, 5/9 $9, 6/8 $6.
- */
-export function layIncrement(box: Box, chip: number): number {
-  const n = Math.max(1, Math.round(chip));
-  if (box === 4 || box === 10) return Math.max(2, n * 2);
-  if (box === 5 || box === 9) return Math.max(3, Math.ceil((n * 3) / 2 / 3) * 3);
-  return Math.max(6, Math.ceil((n * 6) / 5 / 6) * 6);
+export function layIncrement(_box: Box, chip: number): number {
+  return Math.max(1, Math.round(chip));
 }
 
 export function layMinBet(box: Box, tableMin: number): number {
@@ -839,33 +829,7 @@ function placeChip(next: PracticeState, spot: PracticeSpot, chip: number, exact 
   }
 
   const have = spotAmount(next.bets, spot);
-  const min = next.tableMin || 5;
-  let amt = chip;
-
-  if (!exact) {
-    if (spot.startsWith("place")) {
-      const box = boxFromSpot(spot, "place");
-      amt = placeIncrement(box, chip);
-      if (!have) amt = Math.max(amt, placeIncrement(box, min));
-    } else if (spot.startsWith("buy")) {
-      if (!have) amt = Math.max(chip, min, 20);
-    } else if (spot.startsWith("layOdds") || (spot.startsWith("lay") && !spot.startsWith("layOdds"))) {
-      const box = boxFromSpot(spot, spot.startsWith("layOdds") ? "layOdds" : "lay");
-      amt = layIncrement(box, chip);
-      if (!have) amt = Math.max(amt, layMinBet(box, min));
-    } else if (spot === "dontOdds" && next.puck.on) {
-      amt = layIncrement(next.puck.point, chip);
-      if (!have) amt = Math.max(amt, layMinBet(next.puck.point, min));
-    } else if (spot.startsWith("dcOdds")) {
-      const box = boxFromSpot(spot, "dcOdds");
-      amt = layIncrement(box, chip);
-      if (!have) amt = Math.max(amt, layMinBet(box, min));
-    } else if (LINE_SPOTS.includes(spot) && !have) {
-      amt = Math.max(chip, min);
-    } else if ((spot === "passOdds" || spot.startsWith("comeOdds")) && !have) {
-      amt = Math.max(chip, min);
-    }
-  }
+  let amt = Math.max(1, Math.round(chip));
 
   if (spot === "passOdds" && next.puck.on) {
     const cap = maxOdds(next.puck.point, next.bets.pass, false);
@@ -1064,17 +1028,13 @@ export function usePractice() {
   const placeSet = useCallback((boxes: Box[], label: string) => {
     patch((cur) => {
       if (cur.paused) return cur;
-      const min = cur.tableMin || 5;
-      const chip = cur.chip;
+      const chip = Math.max(1, Math.round(cur.chip));
       const adds = boxes.map((n) => {
         const buy = cur.bets.buy[n] || 0;
         const lay = cur.bets.lay[n] || 0;
-        const place = cur.bets.place[n] || 0;
         if (buy) return { kind: "buy" as const, n, amt: chip };
-        if (lay) return { kind: "lay" as const, n, amt: layIncrement(n, chip) };
-        const inc = placeIncrement(n, chip);
-        const amt = place ? inc : Math.max(inc, placeIncrement(n, min));
-        return { kind: "place" as const, n, amt };
+        if (lay) return { kind: "lay" as const, n, amt: chip };
+        return { kind: "place" as const, n, amt: chip };
       });
       const need = adds.reduce((s, a) => s + a.amt, 0);
       if (cur.bank < need) return { ...cur, msg: `Need $${need} for ${label}.` };
