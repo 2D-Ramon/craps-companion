@@ -48,6 +48,7 @@ export function PracticeTable() {
   const last = preview ?? (state.last ? { a: state.last.a, b: state.last.b } : null);
   const onTable = betsOnTable(state.bets);
   const pl = state.lastDelta;
+  const overall = state.bank + onTable - (state.buyIn || 0);
   const paused = state.paused;
 
   useEffect(() => {
@@ -172,6 +173,10 @@ export function PracticeTable() {
               true
             )}
           </b>
+        </div>
+        <div className="hud-stat">
+          <span>Overall</span>
+          <b className={overall >= 0 ? "text-win" : "text-danger"}>{money(overall, true)}</b>
         </div>
         <div className={`hud-dice ${rolling ? "is-rolling" : ""}`}>
           <div className="hud-puck">
