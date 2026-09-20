@@ -36,9 +36,15 @@ export const PRACTICE_TABLE: TableRules = {
 export const CHIP_VALUES = [1, 5, 10, 25, 100, 500] as const;
 export const TABLE_MINS = [5, 10, 15, 25] as const;
 
-/** Chip face value is the wager. Odds may still cap at 3-4-5x. */
-export function placeIncrement(_box: Box, chip: number): number {
-  return Math.max(1, Math.round(chip));
+/**
+ * Place 6/8 pay 7:6, so the wager is always a $6 unit:
+ * $5 → $6, $10 → $12, $15 → $18, $25 → $30, $100 → $120.
+ * Other numbers: chip face value.
+ */
+export function placeIncrement(box: Box, chip: number): number {
+  const n = Math.max(1, Math.round(chip));
+  if (box === 6 || box === 8) return Math.max(6, Math.round((n * 6) / 5));
+  return n;
 }
 
 export function layIncrement(_box: Box, chip: number): number {
@@ -829,7 +835,16 @@ function placeChip(next: PracticeState, spot: PracticeSpot, chip: number, exact 
   }
 
   const have = spotAmount(next.bets, spot);
+  const min = next.tableMin || 5;
   let amt = Math.max(1, Math.round(chip));
+
+  if (spot.startsWith("place")) {
+    const box = boxFromSpot(spot, "place");
+    if (box === 6 || box === 8) {
+      amt = placeIncrement(box, chip);
+      if (!have) amt = Math.max(amt, placeIncrement(box, min));
+    }
+  }
 
   if (spot === "passOdds" && next.puck.on) {
     const cap = maxOdds(next.puck.point, next.bets.pass, false);
@@ -1028,13 +1043,22 @@ export function usePractice() {
   const placeSet = useCallback((boxes: Box[], label: string) => {
     patch((cur) => {
       if (cur.paused) return cur;
+      const min = cur.tableMin || 5;
       const chip = Math.max(1, Math.round(cur.chip));
       const adds = boxes.map((n) => {
         const buy = cur.bets.buy[n] || 0;
         const lay = cur.bets.lay[n] || 0;
+        const place = cur.bets.place[n] || 0;
         if (buy) return { kind: "buy" as const, n, amt: chip };
         if (lay) return { kind: "lay" as const, n, amt: chip };
-        return { kind: "place" as const, n, amt: chip };
+        const inc = placeIncrement(n, chip);
+        const amt =
+          n === 6 || n === 8
+            ? place
+              ? inc
+              : Math.max(inc, placeIncrement(n, min))
+            : chip;
+        return { kind: "place" as const, n, amt };
       });
       const need = adds.reduce((s, a) => s + a.amt, 0);
       if (cur.bank < need) return { ...cur, msg: `Need $${need} for ${label}.` };

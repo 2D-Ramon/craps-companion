@@ -329,9 +329,9 @@ export function PracticeTable() {
               </select>
             </label>
             <p className="settings-note">
-              Save sets your pocket bank now. The chip you select is the amount that goes on the
-              bet — a $100 chip is $100, including lay. Across / Inside / Outside add that chip
-              onto whatever is already on those numbers (buy stays buy, lay stays lay).
+              Save sets your pocket bank now. Most bets use the chip face value. Place 6 and 8 are
+              always $6 units so 7:6 pays even ($10 table → $12, $5 chip → $6, $25 → $30). Across /
+              Inside / Outside add onto whatever is already on those numbers (buy stays buy).
             </p>
             <button
               type="button"
