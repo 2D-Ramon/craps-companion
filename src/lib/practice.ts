@@ -1065,19 +1065,32 @@ export function usePractice() {
     patch((cur) => {
       if (cur.paused) return cur;
       const min = cur.tableMin || 5;
+      const chip = cur.chip;
       const adds = boxes.map((n) => {
-        const inc = placeIncrement(n, cur.chip);
-        return cur.bets.place[n] ? inc : Math.max(inc, placeIncrement(n, min));
+        const buy = cur.bets.buy[n] || 0;
+        const lay = cur.bets.lay[n] || 0;
+        const place = cur.bets.place[n] || 0;
+        if (buy) return { kind: "buy" as const, n, amt: chip };
+        if (lay) return { kind: "lay" as const, n, amt: layIncrement(n, chip) };
+        const inc = placeIncrement(n, chip);
+        const amt = place ? inc : Math.max(inc, placeIncrement(n, min));
+        return { kind: "place" as const, n, amt };
       });
-      const need = adds.reduce((s, n) => s + n, 0);
+      const need = adds.reduce((s, a) => s + a.amt, 0);
       if (cur.bank < need) return { ...cur, msg: `Need $${need} for ${label}.` };
       pushUndo(cur);
       const next = { ...cur, bets: cloneBets(cur.bets), take: false, msg: "" };
-      boxes.forEach((n, i) => {
-        next.bank -= adds[i];
-        next.bets.place[n] = (next.bets.place[n] || 0) + adds[i];
-      });
-      next.msg = `${label} + selected chip (6/8 in $6 units).`;
+      for (const a of adds) {
+        next.bank -= a.amt;
+        if (a.kind === "buy") next.bets.buy[a.n] = (next.bets.buy[a.n] || 0) + a.amt;
+        else if (a.kind === "lay") next.bets.lay[a.n] = (next.bets.lay[a.n] || 0) + a.amt;
+        else next.bets.place[a.n] = (next.bets.place[a.n] || 0) + a.amt;
+      }
+      const kinds = [...new Set(adds.map((a) => a.kind))];
+      next.msg =
+        kinds.length === 1 && kinds[0] !== "place"
+          ? `${label} +$${chip} on existing ${kinds[0]} bets.`
+          : `${label} + selected chip on what’s already up (buy/lay stay buy/lay).`;
       return next;
     });
   }, []);

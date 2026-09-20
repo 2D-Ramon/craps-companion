@@ -330,7 +330,9 @@ export function PracticeTable() {
             </label>
             <p className="settings-note">
               Save sets your pocket bank now. Place 6 and 8 use $6 units ($6 on a $5 table, $12 on
-              $10). Across / Inside / Outside add the chip you have selected.
+              $10). Across / Inside / Outside add the chip you have selected onto whatever is
+              already on those numbers (a $5 chip on a $25 buy stays a buy). Empty numbers get a
+              place bet at table min.
             </p>
             <button
               type="button"
