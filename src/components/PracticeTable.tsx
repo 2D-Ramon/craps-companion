@@ -329,9 +329,10 @@ export function PracticeTable() {
               </select>
             </label>
             <p className="settings-note">
-              Save sets your pocket bank now. Most bets use the chip face value. Place 6 and 8 are
-              always $6 units so 7:6 pays even ($10 table → $12, $5 chip → $6, $25 → $30). Across /
-              Inside / Outside add onto whatever is already on those numbers (buy stays buy).
+              Save sets your pocket bank now. A new bet is never below table min — $5 chip on a $10
+              table still puts $10 on 4/5/9/10. Place 6 and 8 stay $6 units ($10 table → $12).
+              Across / Inside / Outside add onto whatever is already on those numbers (buy stays
+              buy).
             </p>
             <button
               type="button"

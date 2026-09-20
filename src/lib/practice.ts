@@ -840,10 +840,15 @@ function placeChip(next: PracticeState, spot: PracticeSpot, chip: number, exact 
 
   if (spot.startsWith("place")) {
     const box = boxFromSpot(spot, "place");
-    if (box === 6 || box === 8) {
-      amt = placeIncrement(box, chip);
-      if (!have) amt = Math.max(amt, placeIncrement(box, min));
-    }
+    amt = placeIncrement(box, chip);
+    if (!have) amt = Math.max(amt, placeIncrement(box, min));
+  } else if (
+    !have &&
+    (spot.startsWith("buy") ||
+      (spot.startsWith("lay") && !spot.startsWith("layOdds")) ||
+      LINE_SPOTS.includes(spot))
+  ) {
+    amt = Math.max(amt, min);
   }
 
   if (spot === "passOdds" && next.puck.on) {
@@ -1052,12 +1057,7 @@ export function usePractice() {
         if (buy) return { kind: "buy" as const, n, amt: chip };
         if (lay) return { kind: "lay" as const, n, amt: chip };
         const inc = placeIncrement(n, chip);
-        const amt =
-          n === 6 || n === 8
-            ? place
-              ? inc
-              : Math.max(inc, placeIncrement(n, min))
-            : chip;
+        const amt = place ? inc : Math.max(inc, placeIncrement(n, min));
         return { kind: "place" as const, n, amt };
       });
       const need = adds.reduce((s, a) => s + a.amt, 0);
