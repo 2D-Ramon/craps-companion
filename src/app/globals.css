@@ -470,10 +470,72 @@ button {
 }
 
 .hud-full {
+  height: 40px;
+  padding: 0 14px;
   background: #c9a227;
   color: #111;
   border-color: #c9a227;
+  font-size: 13px;
   font-weight: 800;
+}
+
+.fs-nudge {
+  position: absolute;
+  inset: 0;
+  z-index: 28;
+  background: rgba(0, 0, 0, 0.72);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 24px;
+  text-align: center;
+}
+
+.fs-nudge-go {
+  width: min(86vw, 28rem);
+  min-height: 76px;
+  padding: 14px 28px;
+  border: 0;
+  border-radius: 16px;
+  background: #c9a227;
+  color: #111;
+  font-size: 32px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  line-height: 1.1;
+  animation: fs-nudge-pulse 1.6s ease-in-out infinite;
+}
+
+.fs-nudge p {
+  margin: 0;
+  max-width: 22rem;
+  color: #e8e0c8;
+  font-size: 16px;
+}
+
+.fs-nudge-skip {
+  background: transparent;
+  border: 0;
+  color: #b0b0b0;
+  font-size: 15px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 10px 16px;
+}
+
+@keyframes fs-nudge-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(201, 162, 39, 0.55);
+  }
+  50% {
+    transform: scale(1.04);
+    box-shadow: 0 0 0 14px rgba(201, 162, 39, 0);
+  }
 }
 
 .hud-mode {

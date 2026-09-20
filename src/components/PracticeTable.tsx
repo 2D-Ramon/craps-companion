@@ -40,6 +40,7 @@ export function PracticeTable() {
   const [buyDraft, setBuyDraft] = useState(String(state.buyIn));
   const [minDraft, setMinDraft] = useState(String(state.tableMin));
   const [isFull, setIsFull] = useState(false);
+  const [fsNudge, setFsNudge] = useState(true);
   const lock = useRef(false);
   const ivRef = useRef<number>(0);
 
@@ -133,7 +134,7 @@ export function PracticeTable() {
         <Link href="/" className="hud-leave">
           Table
         </Link>
-        {!isFull ? (
+        {!isFull && !fsNudge ? (
           <button type="button" className="hud-leave hud-full" onClick={enterFullscreen}>
             Full screen
           </button>
@@ -295,6 +296,18 @@ export function PracticeTable() {
           </button>
         </div>
       </div>
+
+      {!isFull && fsNudge && !paused ? (
+        <div className="fs-nudge" role="dialog" aria-label="Full screen">
+          <button type="button" className="fs-nudge-go" onClick={enterFullscreen}>
+            Full screen
+          </button>
+          <p>Fills the phone. Hides the browser bar.</p>
+          <button type="button" className="fs-nudge-skip" onClick={() => setFsNudge(false)}>
+            Not now
+          </button>
+        </div>
+      ) : null}
 
       {paused ? (
         <div className="pause-overlay" role="dialog" aria-label="Practice paused">
