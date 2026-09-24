@@ -27,6 +27,52 @@ import type {
   WhenKind,
 } from "@/lib/types";
 
+function DollarsInput({
+  value,
+  min = 1,
+  onCommit,
+  className = "w-24 h-11 rounded-lg bg-black/40 border border-gold/20 px-2 text-base",
+}: {
+  value: number;
+  min?: number;
+  onCommit: (n: number) => void;
+  className?: string;
+}) {
+  const [raw, setRaw] = useState(String(value));
+  const [focused, setFocused] = useState(false);
+  const shown = focused ? raw : String(value);
+  return (
+    <input
+      type="text"
+      inputMode="numeric"
+      pattern="[0-9]*"
+      autoComplete="off"
+      autoCorrect="off"
+      spellCheck={false}
+      value={shown}
+      onPointerDown={(e) => e.stopPropagation()}
+      onFocus={() => {
+        setFocused(true);
+        setRaw(String(value));
+      }}
+      onChange={(e) => {
+        const v = e.target.value.replace(/[^0-9]/g, "");
+        setRaw(v);
+        if (v !== "") {
+          const n = Number(v);
+          if (Number.isFinite(n) && n >= min) onCommit(n);
+        }
+      }}
+      onBlur={() => {
+        setFocused(false);
+        const n = Number(raw);
+        onCommit(Number.isFinite(n) && n >= min ? n : min);
+      }}
+      className={className}
+    />
+  );
+}
+
 const PLACE: Box[] = [4, 5, 6, 8, 9, 10];
 const BUY: Box[] = [4, 5, 9, 10];
 const ROLLS = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
@@ -588,22 +634,15 @@ function BetSection({
                 Remove
               </button>
             </div>
-            <div className="flex flex-wrap gap-2 text-xs items-center">
-              <label className="flex items-center gap-1">
+            <div className="flex flex-wrap gap-2 text-sm items-center">
+              <label className="flex items-center gap-1 relative z-10">
                 $
-                <input
-                  inputMode="numeric"
+                <DollarsInput
                   value={b.dollars ?? tableMin}
-                  onChange={(e) =>
-                    setList(
-                      list.map((x) =>
-                        x.id === b.id
-                          ? { ...x, dollars: Math.max(1, Number(e.target.value) || tableMin) }
-                          : x,
-                      ),
-                    )
+                  min={1}
+                  onCommit={(n) =>
+                    setList(list.map((x) => (x.id === b.id ? { ...x, dollars: n } : x)))
                   }
-                  className="w-16 h-7 rounded bg-black/40 border border-gold/20 px-1"
                 />
               </label>
               {(b.kind === "pass" || b.kind === "dont" || b.kind === "come") && (
@@ -732,13 +771,11 @@ function RuleRow({
       {when.kind === "hitsCount" && (
         <label className="block text-xs">
           After this many hits (example: 2)
-          <input
-            inputMode="numeric"
+          <DollarsInput
             value={when.hits ?? 2}
-            onChange={(e) =>
-              onChange({ ...rule, when: { ...when, hits: Math.max(1, Number(e.target.value) || 1) } })
-            }
-            className="mt-1 w-full h-9 rounded bg-black/40 border border-gold/20 px-2"
+            min={1}
+            onCommit={(n) => onChange({ ...rule, when: { ...when, hits: n } })}
+            className="mt-1 w-full h-11 rounded bg-black/40 border border-gold/20 px-2 text-base"
           />
         </label>
       )}
