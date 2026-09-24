@@ -2,6 +2,7 @@
 
 import { useRef, type ReactNode, type PointerEvent } from "react";
 import { ChipStack } from "@/components/ChipDisc";
+import { buyVig, layVig } from "@/lib/payouts";
 import type { Box, Die, PracticeBets, PracticeSpot, Puck } from "@/lib/types";
 
 const POINTS: Box[] = [4, 5, 6, 8, 9, 10];
@@ -10,6 +11,7 @@ function Spot({
   spot,
   label,
   amount,
+  vig = 0,
   className = "",
   hit = false,
   onTap,
@@ -20,6 +22,7 @@ function Spot({
   spot: PracticeSpot;
   label?: string;
   amount: number;
+  vig?: number;
   className?: string;
   hit?: boolean;
   onTap: (spot: PracticeSpot) => void;
@@ -69,10 +72,11 @@ function Spot({
       onPointerUp={finish}
       onPointerCancel={finish}
       className={`cs-spot ${className} ${amount ? "has-bet" : ""} ${hit ? "hit-roll" : ""}`}
-      aria-label={`${label || spot}${amount ? ` $${Math.round(amount)}` : ""}`}
+      aria-label={`${label || spot}${amount ? ` $${Math.round(amount)}` : ""}${vig ? ` + $${vig} vig` : ""}`}
     >
       {children ?? <span className="cs-lab">{label}</span>}
       {amount > 0 ? <ChipStack amount={amount} compact /> : null}
+      {amount > 0 && vig > 0 ? <span className="cs-vig">${vig} vig</span> : null}
     </button>
   );
 }
@@ -155,6 +159,7 @@ export function PracticeFelt({
               spot={`lay${n}` as PracticeSpot}
               label="LAY"
               amount={bets.lay[n]}
+              vig={layVig(n, bets.lay[n] || 0)}
               className="cs-lay"
               onTap={onTap} onSwipeOff={onSwipeOff} onMove={onMove}
             />
@@ -229,6 +234,7 @@ export function PracticeFelt({
                 spot={`buy${n}` as PracticeSpot}
                 label="BUY"
                 amount={bets.buy[n]}
+                vig={buyVig(bets.buy[n] || 0)}
                 className="cs-buy"
                 hit={lastTotal === n}
                 onTap={onTap}

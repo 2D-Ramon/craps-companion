@@ -41,19 +41,41 @@ export function vigAmount(base: number): number {
   return Math.max(1, Math.ceil(base * 0.05 - 1e-9));
 }
 
-/** Buy: true odds minus 5% vig of the wager. */
-export function buyPays(box: Box, amt: number): number {
-  const gross =
-    box === 4 || box === 10 ? amt * 2 : box === 5 || box === 9 ? (amt * 3) / 2 : (amt * 6) / 5;
-  return Math.max(0, Math.floor(gross) - vigAmount(amt));
+/** Buy vig is 5% of the wager. */
+export function buyVig(amt: number): number {
+  return vigAmount(amt);
 }
 
-/** Lay: true odds minus 5% vig of the win (not the wager). */
-export function layPays(box: Box, amt: number): number {
+/** Lay true-odds win (before vig). */
+export function layWinAmount(box: Box, amt: number): number {
   const gross =
     box === 4 || box === 10 ? amt / 2 : box === 5 || box === 9 ? (amt * 2) / 3 : (amt * 5) / 6;
-  const win = Math.floor(gross);
-  return Math.max(0, win - vigAmount(win));
+  return Math.max(0, Math.floor(gross));
+}
+
+/** Lay vig is 5% of the amount you would win, not the wager. */
+export function layVig(box: Box, amt: number): number {
+  return vigAmount(layWinAmount(box, amt));
+}
+
+function buyGross(box: Box, amt: number): number {
+  if (box === 4 || box === 10) return amt * 2;
+  if (box === 5 || box === 9) return (amt * 3) / 2;
+  return (amt * 6) / 5;
+}
+
+/** Buy: true odds. If vig was not paid up front, subtract 5% of the wager. */
+export function buyPays(box: Box, amt: number, vigUpFront = false): number {
+  const win = Math.max(0, Math.floor(buyGross(box, amt)));
+  if (vigUpFront) return win;
+  return Math.max(0, win - buyVig(amt));
+}
+
+/** Lay: true odds. If vig was not paid up front, subtract 5% of the win. */
+export function layPays(box: Box, amt: number, vigUpFront = false): number {
+  const win = layWinAmount(box, amt);
+  if (vigUpFront) return win;
+  return Math.max(0, win - layVig(box, amt));
 }
 
 export function placePays(box: Box, amount: number): number {

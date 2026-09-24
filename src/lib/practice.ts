@@ -2,7 +2,16 @@
 
 import { useCallback, useSyncExternalStore } from "react";
 import { asTotal, trueDie, truePair } from "./dice";
-import { buyPays, dontOddsPays, fieldPays, layPays, passOddsPays, placePays } from "./payouts";
+import {
+  buyPays,
+  buyVig,
+  dontOddsPays,
+  fieldPays,
+  layPays,
+  layVig,
+  passOddsPays,
+  placePays,
+} from "./payouts";
 import { isBox } from "./puck";
 import type {
   Box,
@@ -30,7 +39,7 @@ export const PRACTICE_TABLE: TableRules = {
   fieldTwo: 2,
   fieldTwelve: 3,
   odds: "3-4-5x",
-  vigUpFront: false,
+  vigUpFront: true,
 };
 
 export const CHIP_VALUES = [1, 5, 10, 25, 100, 500] as const;
@@ -316,7 +325,7 @@ function addToSpot(b: PracticeBets, spot: PracticeSpot, n: number) {
 
 function payLay(p: PracticeState, n: Box) {
   const bets = p.bets;
-  if (bets.lay[n]) profit(p, layPays(n, bets.lay[n]));
+  if (bets.lay[n]) profit(p, layPays(n, bets.lay[n], PRACTICE_TABLE.vigUpFront));
   if (bets.layOdds[n]) profit(p, dontOddsPays(n, bets.layOdds[n]));
 }
 
@@ -659,7 +668,7 @@ export function settlePractice(state: PracticeState, a: Die, b: Die, t: Total): 
       bets.dontOdds = 0;
     }
     if (bets.place[t]) profit(p, placePays(t, bets.place[t]));
-    if (bets.buy[t]) profit(p, buyPays(t, bets.buy[t]));
+    if (bets.buy[t]) profit(p, buyPays(t, bets.buy[t], PRACTICE_TABLE.vigUpFront));
     loseLay(p, t);
     hitCome(t, true);
     loseDc(t, true);
@@ -674,7 +683,7 @@ export function settlePractice(state: PracticeState, a: Die, b: Die, t: Total): 
     p.puck = { on: false };
   } else {
     if (isBox(t) && bets.place[t]) profit(p, placePays(t, bets.place[t]));
-    if (isBox(t) && bets.buy[t]) profit(p, buyPays(t, bets.buy[t]));
+    if (isBox(t) && bets.buy[t]) profit(p, buyPays(t, bets.buy[t], PRACTICE_TABLE.vigUpFront));
     if (isBox(t)) loseLay(p, t);
     if (isBox(t)) {
       hitCome(t, true);
@@ -908,9 +917,24 @@ function placeChip(next: PracticeState, spot: PracticeSpot, chip: number, exact 
     amt = Math.min(amt, room);
   }
 
-  if (next.bank < amt) return "Not enough bank.";
-  next.bank -= amt;
+  let vig = 0;
+  if (spot.startsWith("buy")) {
+    const box = boxFromSpot(spot, "buy");
+    vig = Math.max(0, buyVig(have + amt) - buyVig(have));
+  } else if (spot.startsWith("lay") && !spot.startsWith("layOdds")) {
+    const box = boxFromSpot(spot, "lay");
+    vig = Math.max(0, layVig(box, have + amt) - layVig(box, have));
+  }
+  const cost = amt + vig;
+  if (next.bank < cost) {
+    return vig ? `Need $${Math.round(cost)} (includes $${vig} vig).` : "Not enough bank.";
+  }
+  next.bank -= cost;
   addToSpot(next.bets, spot, amt);
+  if (vig) {
+    const kind = spot.startsWith("buy") ? "Buy" : "Lay";
+    next.msg = `${kind} $${Math.round(amt)} + $${vig} vig`;
+  }
   return null;
 }
 
@@ -1095,21 +1119,36 @@ export function usePractice() {
         const amt = place ? inc : Math.max(inc, placeIncrement(n, min));
         return { kind: "place" as const, n, amt };
       });
-      const need = adds.reduce((s, a) => s + a.amt, 0);
+      const priced = adds.map((a) => {
+        if (a.kind === "buy") {
+          const have = cur.bets.buy[a.n] || 0;
+          const vig = Math.max(0, buyVig(have + a.amt) - buyVig(have));
+          return { ...a, vig };
+        }
+        if (a.kind === "lay") {
+          const have = cur.bets.lay[a.n] || 0;
+          const vig = Math.max(0, layVig(a.n, have + a.amt) - layVig(a.n, have));
+          return { ...a, vig };
+        }
+        return { ...a, vig: 0 };
+      });
+      const need = priced.reduce((s, a) => s + a.amt + a.vig, 0);
       if (cur.bank < need) return { ...cur, msg: `Need $${need} for ${label}.` };
       pushUndo(cur);
       const next = { ...cur, bets: cloneBets(cur.bets), take: false, msg: "" };
-      for (const a of adds) {
-        next.bank -= a.amt;
+      let vigTotal = 0;
+      for (const a of priced) {
+        next.bank -= a.amt + a.vig;
+        vigTotal += a.vig;
         if (a.kind === "buy") next.bets.buy[a.n] = (next.bets.buy[a.n] || 0) + a.amt;
         else if (a.kind === "lay") next.bets.lay[a.n] = (next.bets.lay[a.n] || 0) + a.amt;
         else next.bets.place[a.n] = (next.bets.place[a.n] || 0) + a.amt;
       }
-      const kinds = [...new Set(adds.map((a) => a.kind))];
+      const kinds = [...new Set(priced.map((a) => a.kind))];
       next.msg =
         kinds.length === 1 && kinds[0] !== "place"
-          ? `${label} +$${chip} on existing ${kinds[0]} bets.`
-          : `${label} + selected chip on what’s already up (buy/lay stay buy/lay).`;
+          ? `${label} +$${chip} on existing ${kinds[0]} bets${vigTotal ? ` + $${vigTotal} vig` : ""}.`
+          : `${label} + selected chip on what’s already up (buy/lay stay buy/lay${vigTotal ? `; +$${vigTotal} vig` : ""}).`;
       return next;
     });
   }, []);

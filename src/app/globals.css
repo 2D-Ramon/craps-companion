@@ -820,6 +820,19 @@ button {
   letter-spacing: 0.12em;
 }
 
+.cs-vig {
+  position: absolute;
+  right: 3px;
+  bottom: 2px;
+  z-index: 3;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: #d4a017;
+  line-height: 1;
+  pointer-events: none;
+}
+
 .cs-dc {
   color: #e23b3b;
   gap: 4px;

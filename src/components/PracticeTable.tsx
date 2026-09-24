@@ -354,8 +354,9 @@ export function PracticeTable() {
             <p className="settings-note">
               Save sets your pocket bank now. A new bet is never below table min — $5 chip on a $10
               table still puts $10 on 4/5/9/10. Place 6 and 8 stay $6 units ($10 table → $12).
-              Buy 4 and 10 start at $20. Across / Inside / Outside add onto whatever is already on
-              those numbers (buy stays buy).
+              Buy 4 and 10 start at $20. Buy and lay take 5% vig up front (buy = 5% of the wager,
+              lay = 5% of the win). Across / Inside / Outside add onto whatever is already on those
+              numbers (buy stays buy).
             </p>
             <button
               type="button"
