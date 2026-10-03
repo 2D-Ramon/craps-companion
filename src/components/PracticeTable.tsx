@@ -41,7 +41,6 @@ export function PracticeTable() {
     resume,
     endGame,
     setBankSettings,
-    fill72,
   } = usePractice();
   const [rolling, setRolling] = useState(false);
   const [preview, setPreview] = useState<{ a: Die; b: Die } | null>(null);
@@ -412,9 +411,6 @@ export function PracticeTable() {
           <div className="practice-sheet-body">
             <RollStrip rolls={state.rolls} n={72} withPuck />
             <GlancePercents rolls={state.rolls} windowSize={72} />
-            <button type="button" className="sheet-fill" onClick={fill72}>
-              Fill 72 no bets
-            </button>
           </div>
         </div>
       ) : null}

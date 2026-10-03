@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useSyncExternalStore } from "react";
-import { asTotal, trueDie, truePair } from "./dice";
+import { truePair } from "./dice";
 import {
   buyPays,
   buyVig,
@@ -1522,31 +1522,6 @@ export function usePractice() {
     });
   }, []);
 
-  const fill72 = useCallback(() => {
-    patch((cur) => {
-      const extra: Roll[] = [];
-      let shooter = cur.shooter;
-      let puck = cur.puck;
-      for (let i = 0; i < 72; i++) {
-        const a = trueDie();
-        const b = trueDie();
-        const total = asTotal(a + b);
-        extra.push({ a, b, total, at: Date.now() + i, shooter });
-        if (!puck.on) {
-          if (total !== 7 && total !== 11 && total !== 2 && total !== 3 && total !== 12 && isBox(total)) {
-            puck = { on: true, point: total };
-          }
-        } else if (total === 7) {
-          puck = { on: false };
-          shooter += 1;
-        } else if (total === puck.point) {
-          puck = { on: false };
-        }
-      }
-      return { ...cur, rolls: extra.slice(-MAX_ROLLS), msg: "72 computer rolls — no bets." };
-    });
-  }, []);
-
   return {
     state,
     ready: true,
@@ -1568,6 +1543,5 @@ export function usePractice() {
     endGame,
     setBankSettings,
     reset,
-    fill72,
   };
 }
