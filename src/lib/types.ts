@@ -288,6 +288,11 @@ export type PracticeState = {
   /** Tap a bet to flip it on or off instead of adding chips. */
   offMode: boolean;
   /**
+   * on/off button cycle. 0 normal play, 1 tap bets on or off,
+   * 2 all on, 3 all off. The next tap after 3 returns to 0.
+   */
+  offStep: 0 | 1 | 2 | 3;
+  /**
    * Player override. true = working, false = off.
    * Missing key uses the house rule (place/buy/hard/odds off on the come-out).
    */

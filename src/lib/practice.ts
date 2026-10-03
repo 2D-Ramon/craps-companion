@@ -148,6 +148,7 @@ export function defaultPractice(): PracticeState {
     shooterPnl: 0,
     lastShooterPnl: 0,
     offMode: false,
+    offStep: 0,
     betOn: {},
     lastRepeat: null,
     lastBetOn: null,
@@ -937,6 +938,8 @@ function load(): PracticeState {
     const p = JSON.parse(raw) as PracticeState;
     if (typeof p.bank !== "number") return defaultPractice();
     const empty = emptyPracticeBets();
+    const offStep: 0 | 1 | 2 | 3 =
+      p.offStep === 1 || p.offStep === 2 || p.offStep === 3 ? p.offStep : p.offMode ? 1 : 0;
     return {
       ...defaultPractice(),
       ...p,
@@ -954,7 +957,8 @@ function load(): PracticeState {
         dcOddsOn: { ...empty.dcOddsOn, ...(p.bets?.dcOddsOn || {}) },
         hard: { ...empty.hard, ...(p.bets?.hard || {}) },
       },
-      offMode: Boolean(p.offMode),
+      offStep,
+      offMode: offStep > 0,
       betOn: { ...(p.betOn || {}) },
       lastBetOn: p.lastBetOn ? { ...p.lastBetOn } : null,
     };
@@ -1277,25 +1281,30 @@ export function usePractice() {
   }, []);
 
   const setChip = useCallback((chip: number) => {
-    patch((cur) => ({ ...cur, chip, take: false, offMode: false, msg: "" }));
+    patch((cur) => ({ ...cur, chip, take: false, offMode: false, offStep: 0, msg: "" }));
   }, []);
 
   const toggleTake = useCallback(() => {
-    patch((cur) => ({ ...cur, take: !cur.take, offMode: false, msg: "" }));
+    patch((cur) => ({ ...cur, take: !cur.take, offMode: false, offStep: 0, msg: "" }));
   }, []);
 
-  const toggleOffMode = useCallback(() => {
-    patch((cur) => ({
-      ...cur,
-      offMode: !cur.offMode,
-      take: false,
-      msg: !cur.offMode ? "Tap a bet to turn it on or off." : "",
-    }));
-  }, []);
-
-  const setAllBets = useCallback((on: boolean) => {
+  const cycleOff = useCallback(() => {
     patch((cur) => {
-      if (cur.paused) return cur;
+      if (cur.paused) return { ...cur, msg: "Paused — resume or end game." };
+      const step = cur.offStep || 0;
+      if (step === 0) {
+        return {
+          ...cur,
+          offStep: 1,
+          offMode: true,
+          take: false,
+          msg: "Tap a bet to turn it on or off.",
+        };
+      }
+      if (step === 3) {
+        return { ...cur, offStep: 0, offMode: false, take: false, msg: "Placing bets." };
+      }
+      const on = step === 1;
       const betOn = { ...(cur.betOn || {}) };
       let n = 0;
       for (const spot of TOGGLE_SPOTS) {
@@ -1306,17 +1315,19 @@ export function usePractice() {
         betOn[spot] = on;
         n += 1;
       }
-      if (!n) {
-        return {
-          ...cur,
-          msg: betsOnTable(cur.bets) > 0 ? "Line and come bets stay working." : "No bets up.",
-        };
-      }
-      pushUndo(cur);
+      if (n) pushUndo(cur);
+      const emptyMsg = betsOnTable(cur.bets) > 0 ? "Line and come bets stay working." : "No bets up.";
       return {
         ...cur,
         betOn,
-        msg: on ? "All bets on." : "All bets off. Pass, don't, and come flats stay working.",
+        offStep: on ? 2 : 3,
+        offMode: true,
+        take: false,
+        msg: n
+          ? on
+            ? "All bets on."
+            : "All bets off. Pass, don't, and come flats stay working."
+          : emptyMsg,
       };
     });
   }, []);
@@ -1535,8 +1546,7 @@ export function usePractice() {
     clearSpot,
     setChip,
     toggleTake,
-    toggleOffMode,
-    setAllBets,
+    cycleOff,
     rollOnce,
     takeAllDown,
     undoBet,

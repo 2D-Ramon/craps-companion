@@ -28,8 +28,7 @@ export function PracticeTable() {
     clearSpot,
     setChip,
     toggleTake,
-    toggleOffMode,
-    setAllBets,
+    cycleOff,
     rollOnce,
     takeAllDown,
     undoBet,
@@ -231,10 +230,10 @@ export function PracticeTable() {
         </div>
         <button
           type="button"
-          className={`hud-mode ${state.take || state.offMode ? "taking" : ""}`}
-          onClick={() => (state.offMode ? toggleOffMode() : toggleTake())}
+          className={`hud-mode ${state.take ? "taking" : ""}`}
+          onClick={toggleTake}
         >
-          {state.offMode ? "OFF" : state.take ? "REMOVE" : "PLACE"}
+          {state.take ? "REMOVE" : "PLACE"}
         </button>
         <button type="button" className="hud-roll" onClick={roll} disabled={rolling || paused}>
           {rolling ? "OUT" : "ROLL"}
@@ -299,14 +298,8 @@ export function PracticeTable() {
           <button type="button" onClick={placeOutside}>
             Outside
           </button>
-          <button type="button" className={state.offMode ? "on" : ""} onClick={toggleOffMode}>
-            {state.offMode ? "Tap bet" : "On / off"}
-          </button>
-          <button type="button" onClick={() => setAllBets(true)}>
-            All on
-          </button>
-          <button type="button" onClick={() => setAllBets(false)}>
-            All off
+          <button type="button" className={state.offStep ? "on" : ""} onClick={cycleOff}>
+            on/off
           </button>
           <button type="button" onClick={repeatBets}>
             Repeat
@@ -388,10 +381,10 @@ export function PracticeTable() {
               table still puts $10 on 4/5/9/10. Place 6 and 8 stay $6 units ($10 table → $12).
               Buy 4 and 10 start at $20. Buy and lay take 5% vig up front (buy = 5% of the wager,
               lay = 5% of the win). Across / Inside / Outside add onto whatever is already on those
-              numbers (buy stays buy). On / off, then tap a bet, turns that bet off
-              until you turn it on. All on and All off do the same for every bet
-              except pass, don&apos;t, and come flats, which always stay working.
-              Total is bank plus every chip on the table.
+              numbers (buy stays buy). The on/off button cycles: tap bets on or
+              off, then all on, then all off, then back to placing chips. Pass,
+              don&apos;t, and come flats always stay working. Total is bank plus
+              every chip on the table.
             </p>
             <button
               type="button"
