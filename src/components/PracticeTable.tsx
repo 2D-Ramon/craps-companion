@@ -30,7 +30,7 @@ export function PracticeTable() {
     toggleTake,
     cycleOff,
     rollOnce,
-    takeAllDown,
+    cycleDown,
     undoBet,
     moveBet,
     repeatBets,
@@ -307,11 +307,8 @@ export function PracticeTable() {
           <button type="button" onClick={undoBet}>
             Undo
           </button>
-          <button type="button" className={state.take ? "on" : ""} onClick={toggleTake}>
-            Remove
-          </button>
-          <button type="button" onClick={takeAllDown}>
-            Take all
+          <button type="button" className={state.take ? "on" : ""} onClick={cycleDown}>
+            Down
           </button>
           <button type="button" onClick={() => setSheet(true)}>
             Stats
@@ -383,8 +380,9 @@ export function PracticeTable() {
               lay = 5% of the win). Across / Inside / Outside add onto whatever is already on those
               numbers (buy stays buy). The on/off button cycles: tap bets on or
               off, then all on, then all off, then back to placing chips. Pass,
-              don&apos;t, and come flats always stay working. Total is bank plus
-              every chip on the table.
+              don&apos;t, and come flats always stay working. Down once, then tap a
+              bet to take that bet down. Down again takes every bet down. Total
+              is bank plus every chip on the table.
             </p>
             <button
               type="button"

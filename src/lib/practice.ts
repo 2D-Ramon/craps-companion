@@ -1384,17 +1384,27 @@ export function usePractice() {
     return pair;
   }, []);
 
-  const takeAllDown = useCallback(() => {
+  const cycleDown = useCallback(() => {
     patch((cur) => {
-      if (cur.paused) return cur;
+      if (cur.paused) return { ...cur, msg: "Paused — resume or end game." };
+      if (!cur.take) {
+        return {
+          ...cur,
+          take: true,
+          offMode: false,
+          offStep: 0,
+          msg: "Tap a bet to take it down.",
+        };
+      }
       const back = betsOnTable(cur.bets);
-      if (!back) return { ...cur, msg: "No bets up." };
+      if (!back) return { ...cur, take: false, msg: "No bets up." };
       pushUndo(cur);
       return {
         ...cur,
         bank: cur.bank + back,
         bets: emptyPracticeBets(),
         betOn: {},
+        take: false,
         msg: `All bets down $${Math.round(back)}`,
       };
     });
@@ -1548,7 +1558,7 @@ export function usePractice() {
     toggleTake,
     cycleOff,
     rollOnce,
-    takeAllDown,
+    cycleDown,
     undoBet,
     placeAcross: () => placeSet(ACROSS, "Across"),
     placeInside: () => placeSet(INSIDE, "Inside"),
