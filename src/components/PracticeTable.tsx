@@ -7,7 +7,16 @@ import { DiceFace } from "@/components/DiceFace";
 import { GlancePercents } from "@/components/GlancePercents";
 import { PracticeFelt } from "@/components/PracticeFelt";
 import { RollStrip } from "@/components/RollStrip";
-import { CHIP_VALUES, TABLE_MINS, betsOnTable, handRollSinceSevenOut, usePractice } from "@/lib/practice";
+import {
+  CHIP_VALUES,
+  TABLE_MINS,
+  TOGGLE_SPOTS,
+  betIsWorking,
+  betsOnTable,
+  handRollSinceSevenOut,
+  spotAmount,
+  usePractice,
+} from "@/lib/practice";
 import { trueDie } from "@/lib/dice";
 import { money } from "@/lib/format";
 import type { Die } from "@/lib/types";
@@ -19,6 +28,8 @@ export function PracticeTable() {
     clearSpot,
     setChip,
     toggleTake,
+    toggleOffMode,
+    setAllBets,
     rollOnce,
     takeAllDown,
     undoBet,
@@ -48,6 +59,13 @@ export function PracticeTable() {
 
   const last = preview ?? (state.last ? { a: state.last.a, b: state.last.b } : null);
   const onTable = betsOnTable(state.bets);
+  const totalStack = state.bank + onTable;
+  const offSpots = new Set<string>();
+  for (const spot of TOGGLE_SPOTS) {
+    if (spotAmount(state.bets, spot) > 0 && !betIsWorking(state.betOn, spot, state.puck.on)) {
+      offSpots.add(spot);
+    }
+  }
   const pl = state.lastDelta;
   const overall = state.bank + onTable - (state.buyIn || 0);
   const paused = state.paused;
@@ -155,6 +173,10 @@ export function PracticeTable() {
           <span>Working</span>
           <b>{money(onTable)}</b>
         </div>
+        <div className="hud-stat" title="Bank plus chips on the table">
+          <span>Total</span>
+          <b>{money(totalStack)}</b>
+        </div>
         <div className="hud-stat">
           <span>
             {state.rolls.some((r) => r.shooter === state.shooter) || !state.lastShooterPnl
@@ -209,10 +231,10 @@ export function PracticeTable() {
         </div>
         <button
           type="button"
-          className={`hud-mode ${state.take ? "taking" : ""}`}
-          onClick={toggleTake}
+          className={`hud-mode ${state.take || state.offMode ? "taking" : ""}`}
+          onClick={() => (state.offMode ? toggleOffMode() : toggleTake())}
         >
-          {state.take ? "REMOVE" : "PLACE"}
+          {state.offMode ? "OFF" : state.take ? "REMOVE" : "PLACE"}
         </button>
         <button type="button" className="hud-roll" onClick={roll} disabled={rolling || paused}>
           {rolling ? "OUT" : "ROLL"}
@@ -249,6 +271,7 @@ export function PracticeTable() {
               onTap={tapSpot}
               onSwipeOff={clearSpot}
               onMove={moveBet}
+              offSpots={offSpots}
             />
           </div>
         </div>
@@ -275,6 +298,15 @@ export function PracticeTable() {
           </button>
           <button type="button" onClick={placeOutside}>
             Outside
+          </button>
+          <button type="button" className={state.offMode ? "on" : ""} onClick={toggleOffMode}>
+            {state.offMode ? "Tap bet" : "On / off"}
+          </button>
+          <button type="button" onClick={() => setAllBets(true)}>
+            All on
+          </button>
+          <button type="button" onClick={() => setAllBets(false)}>
+            All off
           </button>
           <button type="button" onClick={repeatBets}>
             Repeat
@@ -356,7 +388,10 @@ export function PracticeTable() {
               table still puts $10 on 4/5/9/10. Place 6 and 8 stay $6 units ($10 table → $12).
               Buy 4 and 10 start at $20. Buy and lay take 5% vig up front (buy = 5% of the wager,
               lay = 5% of the win). Across / Inside / Outside add onto whatever is already on those
-              numbers (buy stays buy).
+              numbers (buy stays buy). On / off, then tap a bet, turns that bet off
+              until you turn it on. All on and All off do the same for every bet
+              except pass, don&apos;t, and come flats, which always stay working.
+              Total is bank plus every chip on the table.
             </p>
             <button
               type="button"

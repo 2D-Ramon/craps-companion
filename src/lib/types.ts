@@ -285,6 +285,13 @@ export type PracticeState = {
   tableMin: number;
   chip: number;
   take: boolean;
+  /** Tap a bet to flip it on or off instead of adding chips. */
+  offMode: boolean;
+  /**
+   * Player override. true = working, false = off.
+   * Missing key uses the house rule (place/buy/hard/odds off on the come-out).
+   */
+  betOn: Partial<Record<PracticeSpot, boolean>>;
   paused: boolean;
   puck: Puck;
   bets: PracticeBets;
@@ -294,6 +301,8 @@ export type PracticeState = {
   shooterPnl: number;
   lastShooterPnl: number;
   lastRepeat: PracticeBets | null;
+  /** On/off overrides that belonged to lastRepeat. */
+  lastBetOn: Partial<Record<PracticeSpot, boolean>> | null;
   last: { a: Die; b: Die; total: Total } | null;
   lastDelta: number;
   msg: string;

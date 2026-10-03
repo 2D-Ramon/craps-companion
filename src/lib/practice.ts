@@ -147,7 +147,10 @@ export function defaultPractice(): PracticeState {
     shooter: 1,
     shooterPnl: 0,
     lastShooterPnl: 0,
+    offMode: false,
+    betOn: {},
     lastRepeat: null,
+    lastBetOn: null,
     last: null,
     lastDelta: 0,
     msg: "",
@@ -323,19 +326,189 @@ function addToSpot(b: PracticeBets, spot: PracticeSpot, n: number) {
   rec[spot] = Math.max(0, (rec[spot] || 0) + n);
 }
 
-function payLay(p: PracticeState, n: Box) {
-  const bets = p.bets;
-  if (bets.lay[n]) profit(p, layPays(n, bets.lay[n], PRACTICE_TABLE.vigUpFront));
-  if (bets.layOdds[n]) profit(p, dontOddsPays(n, bets.layOdds[n]));
+const CONTRACT_SPOTS = new Set<PracticeSpot>([
+  "pass",
+  "dont",
+  "come",
+  "dc",
+  "comeOn4",
+  "comeOn5",
+  "comeOn6",
+  "comeOn8",
+  "comeOn9",
+  "comeOn10",
+  "dcOn4",
+  "dcOn5",
+  "dcOn6",
+  "dcOn8",
+  "dcOn9",
+  "dcOn10",
+]);
+
+/** Bets the player can call on or off. Line and come flats are contracts. */
+export const TOGGLE_SPOTS: PracticeSpot[] = [
+  "passOdds",
+  "dontOdds",
+  "place4",
+  "place5",
+  "place6",
+  "place8",
+  "place9",
+  "place10",
+  "buy4",
+  "buy5",
+  "buy6",
+  "buy8",
+  "buy9",
+  "buy10",
+  "lay4",
+  "lay5",
+  "lay6",
+  "lay8",
+  "lay9",
+  "lay10",
+  "layOdds4",
+  "layOdds5",
+  "layOdds6",
+  "layOdds8",
+  "layOdds9",
+  "layOdds10",
+  "comeOdds4",
+  "comeOdds5",
+  "comeOdds6",
+  "comeOdds8",
+  "comeOdds9",
+  "comeOdds10",
+  "dcOdds4",
+  "dcOdds5",
+  "dcOdds6",
+  "dcOdds8",
+  "dcOdds9",
+  "dcOdds10",
+  "field",
+  "hard4",
+  "hard6",
+  "hard8",
+  "hard10",
+  "any7",
+  "anyCraps",
+  "yo",
+  "two",
+  "three",
+  "twelve",
+  "horn",
+  "ce",
+  "threeWay",
+  "world",
+  "hornHigh2",
+  "hornHigh3",
+  "hornHigh11",
+  "hornHigh12",
+  "big6",
+  "big8",
+];
+
+export function canToggleOff(spot: PracticeSpot): boolean {
+  return !CONTRACT_SPOTS.has(spot);
 }
 
-function loseLay(p: PracticeState, n: Box) {
+/** House default before a player calls the bet on or off. */
+export function houseWorking(spot: PracticeSpot, puckOn: boolean): boolean {
+  if (!canToggleOff(spot)) return true;
+  if (puckOn) return true;
+  if (spot === "passOdds" || spot === "big6" || spot === "big8") return false;
+  if (
+    spot.startsWith("place") ||
+    spot.startsWith("buy") ||
+    spot.startsWith("hard") ||
+    spot.startsWith("comeOdds") ||
+    spot.startsWith("dcOdds")
+  ) {
+    return false;
+  }
+  return true;
+}
+
+/** True when this bet wins and loses on the next roll. */
+export function betIsWorking(
+  betOn: Partial<Record<PracticeSpot, boolean>> | undefined,
+  spot: PracticeSpot,
+  puckOn: boolean
+): boolean {
+  if (!canToggleOff(spot)) return true;
+  if (spot.startsWith("layOdds")) {
+    const lay = `lay${spot.slice("layOdds".length)}` as PracticeSpot;
+    if (!betIsWorking(betOn, lay, puckOn)) return false;
+  }
+  const forced = betOn?.[spot];
+  if (typeof forced === "boolean") return forced;
+  return houseWorking(spot, puckOn);
+}
+
+export function spotLabel(spot: PracticeSpot): string {
+  const named: Partial<Record<PracticeSpot, string>> = {
+    passOdds: "Pass odds",
+    dontOdds: "Don't odds",
+    field: "Field",
+    any7: "Any 7",
+    anyCraps: "Any craps",
+    yo: "Yo",
+    two: "2",
+    three: "3",
+    twelve: "12",
+    horn: "Horn",
+    ce: "C & E",
+    threeWay: "3-way",
+    world: "World",
+    hornHigh2: "Horn high 2",
+    hornHigh3: "Horn high 3",
+    hornHigh11: "Horn high 11",
+    hornHigh12: "Horn high 12",
+    big6: "Big 6",
+    big8: "Big 8",
+  };
+  if (named[spot]) return named[spot];
+  if (spot.startsWith("layOdds")) return `Lay odds ${spot.slice("layOdds".length)}`;
+  if (spot.startsWith("comeOdds")) return `Come odds ${spot.slice("comeOdds".length)}`;
+  if (spot.startsWith("dcOdds")) return `DC odds ${spot.slice("dcOdds".length)}`;
+  if (spot.startsWith("place")) return `Place ${spot.slice("place".length)}`;
+  if (spot.startsWith("buy")) return `Buy ${spot.slice("buy".length)}`;
+  if (spot.startsWith("lay")) return `Lay ${spot.slice("lay".length)}`;
+  if (spot.startsWith("hard")) return `Hard ${spot.slice("hard".length)}`;
+  return spot;
+}
+
+function pruneBetOn(p: PracticeState) {
+  const next = { ...(p.betOn || {}) };
+  for (const spot of Object.keys(next) as PracticeSpot[]) {
+    if (!spotAmount(p.bets, spot)) delete next[spot];
+  }
+  p.betOn = next;
+}
+
+function payLay(p: PracticeState, n: Box, oddsWorking: boolean) {
   const bets = p.bets;
-  const stake = (bets.lay[n] || 0) + (bets.layOdds[n] || 0);
-  if (!stake) return;
-  drop(p, stake);
-  bets.lay[n] = 0;
-  bets.layOdds[n] = 0;
+  if (bets.lay[n]) profit(p, layPays(n, bets.lay[n], PRACTICE_TABLE.vigUpFront));
+  if (bets.layOdds[n]) {
+    if (oddsWorking) profit(p, dontOddsPays(n, bets.layOdds[n]));
+    else {
+      returnStake(p, bets.layOdds[n]);
+      bets.layOdds[n] = 0;
+    }
+  }
+}
+
+function loseLay(p: PracticeState, n: Box, oddsWorking: boolean) {
+  const bets = p.bets;
+  if (bets.lay[n]) {
+    drop(p, bets.lay[n]);
+    bets.lay[n] = 0;
+  }
+  if (bets.layOdds[n]) {
+    if (oddsWorking) drop(p, bets.layOdds[n]);
+    else returnStake(p, bets.layOdds[n]);
+    bets.layOdds[n] = 0;
+  }
 }
 
 function hopOdds(total: Total): number {
@@ -374,58 +547,63 @@ function drop(p: PracticeState, amount: number) {
 }
 
 export function settlePractice(state: PracticeState, a: Die, b: Die, t: Total): PracticeState {
+  const rollPuckOn = Boolean(state.puck.on);
   const p: PracticeState = {
     ...state,
     bets: cloneBets(state.bets),
+    betOn: { ...(state.betOn || {}) },
     lastDelta: 0,
     last: { a, b, total: t },
     msg: "",
   };
   const bets = p.bets;
   const hardHit = a === b && (t === 4 || t === 6 || t === 8 || t === 10);
+  function working(spot: PracticeSpot): boolean {
+    return betIsWorking(p.betOn, spot, rollPuckOn);
+  }
 
-  if (bets.any7) {
+  if (bets.any7 && working("any7")) {
     if (t === 7) profit(p, bets.any7 * 4);
     else drop(p, bets.any7);
     if (t === 7) returnStake(p, bets.any7);
     bets.any7 = 0;
   }
-  if (bets.anyCraps) {
+  if (bets.anyCraps && working("anyCraps")) {
     if (t === 2 || t === 3 || t === 12) {
       profit(p, bets.anyCraps * 7);
       returnStake(p, bets.anyCraps);
     } else drop(p, bets.anyCraps);
     bets.anyCraps = 0;
   }
-  if (bets.yo) {
+  if (bets.yo && working("yo")) {
     if (t === 11) {
       profit(p, bets.yo * 15);
       returnStake(p, bets.yo);
     } else drop(p, bets.yo);
     bets.yo = 0;
   }
-  if (bets.two) {
+  if (bets.two && working("two")) {
     if (t === 2) {
       profit(p, bets.two * 30);
       returnStake(p, bets.two);
     } else drop(p, bets.two);
     bets.two = 0;
   }
-  if (bets.three) {
+  if (bets.three && working("three")) {
     if (t === 3) {
       profit(p, bets.three * 15);
       returnStake(p, bets.three);
     } else drop(p, bets.three);
     bets.three = 0;
   }
-  if (bets.twelve) {
+  if (bets.twelve && working("twelve")) {
     if (t === 12) {
       profit(p, bets.twelve * 30);
       returnStake(p, bets.twelve);
     } else drop(p, bets.twelve);
     bets.twelve = 0;
   }
-  if (bets.horn) {
+  if (bets.horn && working("horn")) {
     const u = bets.horn / 4;
     if (t === 2 || t === 12) {
       profit(p, u * 30);
@@ -438,7 +616,7 @@ export function settlePractice(state: PracticeState, a: Die, b: Die, t: Total): 
     } else drop(p, bets.horn);
     bets.horn = 0;
   }
-  if (bets.ce) {
+  if (bets.ce && working("ce")) {
     const u = bets.ce / 2;
     if (t === 2 || t === 3 || t === 12) {
       profit(p, u * 7);
@@ -451,7 +629,7 @@ export function settlePractice(state: PracticeState, a: Die, b: Die, t: Total): 
     } else drop(p, bets.ce);
     bets.ce = 0;
   }
-  if (bets.threeWay) {
+  if (bets.threeWay && working("threeWay")) {
     resolveSplit(
       p,
       bets.threeWay,
@@ -465,7 +643,7 @@ export function settlePractice(state: PracticeState, a: Die, b: Die, t: Total): 
     );
     bets.threeWay = 0;
   }
-  if (bets.world) {
+  if (bets.world && working("world")) {
     const u = bets.world / 5;
     if (t === 7) {
       profit(p, u * 4);
@@ -486,7 +664,7 @@ export function settlePractice(state: PracticeState, a: Die, b: Die, t: Total): 
   ];
   for (const { key, high } of hornHigh) {
     const amt = bets[key];
-    if (!amt) continue;
+    if (!amt || !working(key)) continue;
     const u = amt / 5;
     if (t === high) {
       profit(p, u * 2 * hopOdds(high));
@@ -499,7 +677,7 @@ export function settlePractice(state: PracticeState, a: Die, b: Die, t: Total): 
     } else drop(p, amt);
     bets[key] = 0;
   }
-  if (bets.field) {
+  if (bets.field && working("field")) {
     const fp = fieldPays(t, bets.field, PRACTICE_TABLE);
     if (fp) {
       profit(p, fp);
@@ -550,7 +728,7 @@ export function settlePractice(state: PracticeState, a: Die, b: Die, t: Total): 
   }
   function settleHardAndBig() {
     for (const n of HARD) {
-      if (!bets.hard[n]) continue;
+      if (!bets.hard[n] || !working(`hard${n}` as PracticeSpot)) continue;
       if (t === 7 || (t === n && !hardHit)) {
         drop(p, bets.hard[n]);
         bets.hard[n] = 0;
@@ -558,14 +736,14 @@ export function settlePractice(state: PracticeState, a: Die, b: Die, t: Total): 
         profit(p, bets.hard[n] * (n === 4 || n === 10 ? 7 : 9));
       }
     }
-    if (bets.big6) {
+    if (bets.big6 && working("big6")) {
       if (t === 6) profit(p, bets.big6);
       else if (t === 7) {
         drop(p, bets.big6);
         bets.big6 = 0;
       }
     }
-    if (bets.big8) {
+    if (bets.big8 && working("big8")) {
       if (t === 8) profit(p, bets.big8);
       else if (t === 7) {
         drop(p, bets.big8);
@@ -595,18 +773,41 @@ export function settlePractice(state: PracticeState, a: Die, b: Die, t: Total): 
     } else if (isBox(t)) {
       p.puck = { on: true, point: t };
     }
-    /* Come/DC on numbers always work; their odds are OFF on the come-out. Lays work. Place/buy/hard/big are OFF. */
+    /* Come and DC flats always work. Everything else follows on/off. */
     if (t === 7) {
       for (const n of BOXES) {
-        loseCome(n, false);
-        hitDc(n, false);
-        payLay(p, n);
+        loseCome(n, working(`comeOdds${n}` as PracticeSpot));
+        hitDc(n, working(`dcOdds${n}` as PracticeSpot));
+        if (working(`lay${n}` as PracticeSpot)) {
+          payLay(p, n, working(`layOdds${n}` as PracticeSpot));
+        }
       }
     } else if (isBox(t)) {
-      hitCome(t, false);
-      loseDc(t, false);
-      loseLay(p, t);
+      hitCome(t, working(`comeOdds${t}` as PracticeSpot));
+      loseDc(t, working(`dcOdds${t}` as PracticeSpot));
+      if (working(`lay${t}` as PracticeSpot)) {
+        loseLay(p, t, working(`layOdds${t}` as PracticeSpot));
+      }
     }
+    for (const n of BOXES) {
+      const placeOn = working(`place${n}` as PracticeSpot);
+      const buyOn = working(`buy${n}` as PracticeSpot);
+      if (t === 7) {
+        if (bets.place[n] && placeOn) {
+          drop(p, bets.place[n]);
+          bets.place[n] = 0;
+        }
+        if (bets.buy[n] && buyOn) {
+          drop(p, bets.buy[n]);
+          bets.buy[n] = 0;
+        }
+      } else if (t === n) {
+        if (bets.place[n] && placeOn) profit(p, placePays(n, bets.place[n]));
+        if (bets.buy[n] && buyOn) profit(p, buyPays(n, bets.buy[n], PRACTICE_TABLE.vigUpFront));
+      }
+    }
+    settleHardAndBig();
+    pruneBetOn(p);
     return p;
   }
 
@@ -628,34 +829,37 @@ export function settlePractice(state: PracticeState, a: Die, b: Die, t: Total): 
       bets.pass = 0;
     }
     if (bets.passOdds) {
-      drop(p, bets.passOdds);
+      if (working("passOdds")) drop(p, bets.passOdds);
+      else returnStake(p, bets.passOdds);
       bets.passOdds = 0;
     }
     if (bets.dont) profit(p, bets.dont);
     if (bets.dontOdds) {
-      profit(p, dontOddsPays(point, bets.dontOdds));
+      if (working("dontOdds")) profit(p, dontOddsPays(point, bets.dontOdds));
       returnStake(p, bets.dontOdds);
       bets.dontOdds = 0;
     }
     for (const n of BOXES) {
-      loseCome(n, true);
-      hitDc(n, true);
-      if (bets.place[n]) {
+      loseCome(n, working(`comeOdds${n}` as PracticeSpot));
+      hitDc(n, working(`dcOdds${n}` as PracticeSpot));
+      if (bets.place[n] && working(`place${n}` as PracticeSpot)) {
         drop(p, bets.place[n]);
         bets.place[n] = 0;
       }
-      if (bets.buy[n]) {
+      if (bets.buy[n] && working(`buy${n}` as PracticeSpot)) {
         drop(p, bets.buy[n]);
         bets.buy[n] = 0;
       }
-      payLay(p, n);
+      if (working(`lay${n}` as PracticeSpot)) {
+        payLay(p, n, working(`layOdds${n}` as PracticeSpot));
+      }
     }
     p.puck = { on: false };
     p.shooter += 1;
   } else if (t === point) {
     if (bets.pass) profit(p, bets.pass);
     if (bets.passOdds) {
-      profit(p, passOddsPays(point, bets.passOdds));
+      if (working("passOdds")) profit(p, passOddsPays(point, bets.passOdds));
       returnStake(p, bets.passOdds);
       bets.passOdds = 0;
     }
@@ -664,14 +868,17 @@ export function settlePractice(state: PracticeState, a: Die, b: Die, t: Total): 
       bets.dont = 0;
     }
     if (bets.dontOdds) {
-      drop(p, bets.dontOdds);
+      if (working("dontOdds")) drop(p, bets.dontOdds);
+      else returnStake(p, bets.dontOdds);
       bets.dontOdds = 0;
     }
-    if (bets.place[t]) profit(p, placePays(t, bets.place[t]));
-    if (bets.buy[t]) profit(p, buyPays(t, bets.buy[t], PRACTICE_TABLE.vigUpFront));
-    loseLay(p, t);
-    hitCome(t, true);
-    loseDc(t, true);
+    if (bets.place[t] && working(`place${t}` as PracticeSpot)) profit(p, placePays(t, bets.place[t]));
+    if (bets.buy[t] && working(`buy${t}` as PracticeSpot)) {
+      profit(p, buyPays(t, bets.buy[t], PRACTICE_TABLE.vigUpFront));
+    }
+    if (working(`lay${t}` as PracticeSpot)) loseLay(p, t, working(`layOdds${t}` as PracticeSpot));
+    hitCome(t, working(`comeOdds${t}` as PracticeSpot));
+    loseDc(t, working(`dcOdds${t}` as PracticeSpot));
     if (bets.come) {
       bets.comeOn[t] = (bets.comeOn[t] || 0) + bets.come;
       bets.come = 0;
@@ -682,12 +889,18 @@ export function settlePractice(state: PracticeState, a: Die, b: Die, t: Total): 
     }
     p.puck = { on: false };
   } else {
-    if (isBox(t) && bets.place[t]) profit(p, placePays(t, bets.place[t]));
-    if (isBox(t) && bets.buy[t]) profit(p, buyPays(t, bets.buy[t], PRACTICE_TABLE.vigUpFront));
-    if (isBox(t)) loseLay(p, t);
+    if (isBox(t) && bets.place[t] && working(`place${t}` as PracticeSpot)) {
+      profit(p, placePays(t, bets.place[t]));
+    }
+    if (isBox(t) && bets.buy[t] && working(`buy${t}` as PracticeSpot)) {
+      profit(p, buyPays(t, bets.buy[t], PRACTICE_TABLE.vigUpFront));
+    }
+    if (isBox(t) && working(`lay${t}` as PracticeSpot)) {
+      loseLay(p, t, working(`layOdds${t}` as PracticeSpot));
+    }
     if (isBox(t)) {
-      hitCome(t, true);
-      loseDc(t, true);
+      hitCome(t, working(`comeOdds${t}` as PracticeSpot));
+      loseDc(t, working(`dcOdds${t}` as PracticeSpot));
     }
     if (bets.come) {
       if (t === 11) profit(p, bets.come);
@@ -712,6 +925,7 @@ export function settlePractice(state: PracticeState, a: Die, b: Die, t: Total): 
       }
     }
   }
+  pruneBetOn(p);
   return p;
 }
 
@@ -740,6 +954,9 @@ function load(): PracticeState {
         dcOddsOn: { ...empty.dcOddsOn, ...(p.bets?.dcOddsOn || {}) },
         hard: { ...empty.hard, ...(p.bets?.hard || {}) },
       },
+      offMode: Boolean(p.offMode),
+      betOn: { ...(p.betOn || {}) },
+      lastBetOn: p.lastBetOn ? { ...p.lastBetOn } : null,
     };
   } catch {
     return defaultPractice();
@@ -794,11 +1011,41 @@ export function pausePractice() {
   patch((cur) => (cur.paused ? cur : { ...cur, paused: true, msg: "Paused." }));
 }
 
-type UndoSnap = { bank: number; bets: PracticeBets };
+type UndoSnap = {
+  bank: number;
+  bets: PracticeBets;
+  betOn: Partial<Record<PracticeSpot, boolean>>;
+};
 let undoStack: UndoSnap[] = [];
 
 function pushUndo(cur: PracticeState) {
-  undoStack = [...undoStack, { bank: cur.bank, bets: cloneBets(cur.bets) }].slice(-20);
+  undoStack = [
+    ...undoStack,
+    { bank: cur.bank, bets: cloneBets(cur.bets), betOn: { ...(cur.betOn || {}) } },
+  ].slice(-20);
+}
+
+function toggleOne(cur: PracticeState, spot: PracticeSpot): PracticeState {
+  const have = spotAmount(cur.bets, spot);
+  if (!have) return { ...cur, msg: "No bet on that spot." };
+  if (!canToggleOff(spot)) return { ...cur, msg: "Pass, don't, and come flats stay working." };
+  if (spot.startsWith("layOdds")) {
+    const lay = `lay${spot.slice("layOdds".length)}` as PracticeSpot;
+    if (!betIsWorking(cur.betOn, lay, cur.puck.on)) {
+      return { ...cur, msg: "Lay odds stay off while that lay is off." };
+    }
+  }
+  pushUndo(cur);
+  const on = betIsWorking(cur.betOn, spot, cur.puck.on);
+  const nextOn = !on;
+  const betOn = { ...(cur.betOn || {}) };
+  if (nextOn === houseWorking(spot, cur.puck.on)) delete betOn[spot];
+  else betOn[spot] = nextOn;
+  return {
+    ...cur,
+    betOn,
+    msg: `${spotLabel(spot)} ${nextOn ? "on" : "off"}.`,
+  };
 }
 
 function returnOrphanOdds(next: PracticeState) {
@@ -944,6 +1191,7 @@ export function usePractice() {
   const tapSpot = useCallback((spot: PracticeSpot) => {
     patch((cur) => {
       if (cur.paused) return { ...cur, msg: "Paused — resume or end game." };
+      if (cur.offMode) return toggleOne(cur, spot);
       const next = { ...cur, bets: cloneBets(cur.bets), msg: "" };
       const chip = Math.max(next.chip, 1);
       if (next.take) {
@@ -954,6 +1202,7 @@ export function usePractice() {
         addToSpot(next.bets, spot, -n);
         next.bank += n;
         returnOrphanOdds(next);
+        pruneBetOn(next);
         next.msg = `Took down $${Math.round(n)}`;
         return next;
       }
@@ -984,6 +1233,7 @@ export function usePractice() {
         return next;
       }
       returnOrphanOdds(next);
+      pruneBetOn(next);
       next.msg = `Moved $${Math.round(amt)}`;
       return next;
     });
@@ -997,13 +1247,16 @@ export function usePractice() {
       const cost = betsOnTable(cur.lastRepeat);
       if (wealth < cost) return { ...cur, msg: `Need $${Math.round(cost)} to repeat.` };
       pushUndo(cur);
-      return {
+      const next = {
         ...cur,
         bets: cloneBets(cur.lastRepeat),
+        betOn: { ...(cur.lastBetOn || {}) },
         bank: wealth - cost,
         take: false,
         msg: "Repeated last bets.",
       };
+      pruneBetOn(next);
+      return next;
     });
   }, []);
 
@@ -1017,17 +1270,55 @@ export function usePractice() {
       addToSpot(next.bets, spot, -have);
       next.bank += have;
       returnOrphanOdds(next);
+      pruneBetOn(next);
       next.msg = `Removed $${Math.round(have)}`;
       return next;
     });
   }, []);
 
   const setChip = useCallback((chip: number) => {
-    patch((cur) => ({ ...cur, chip, take: false, msg: "" }));
+    patch((cur) => ({ ...cur, chip, take: false, offMode: false, msg: "" }));
   }, []);
 
   const toggleTake = useCallback(() => {
-    patch((cur) => ({ ...cur, take: !cur.take, msg: "" }));
+    patch((cur) => ({ ...cur, take: !cur.take, offMode: false, msg: "" }));
+  }, []);
+
+  const toggleOffMode = useCallback(() => {
+    patch((cur) => ({
+      ...cur,
+      offMode: !cur.offMode,
+      take: false,
+      msg: !cur.offMode ? "Tap a bet to turn it on or off." : "",
+    }));
+  }, []);
+
+  const setAllBets = useCallback((on: boolean) => {
+    patch((cur) => {
+      if (cur.paused) return cur;
+      const betOn = { ...(cur.betOn || {}) };
+      let n = 0;
+      for (const spot of TOGGLE_SPOTS) {
+        if (!spotAmount(cur.bets, spot)) {
+          delete betOn[spot];
+          continue;
+        }
+        betOn[spot] = on;
+        n += 1;
+      }
+      if (!n) {
+        return {
+          ...cur,
+          msg: betsOnTable(cur.bets) > 0 ? "Line and come bets stay working." : "No bets up.",
+        };
+      }
+      pushUndo(cur);
+      return {
+        ...cur,
+        betOn,
+        msg: on ? "All bets on." : "All bets off. Pass, don't, and come flats stay working.",
+      };
+    });
   }, []);
 
   const rollOnce = useCallback(() => {
@@ -1036,8 +1327,10 @@ export function usePractice() {
       if (cur.paused) return cur;
       undoStack = [];
       const lastRepeat = cloneBets(cur.bets);
+      const lastBetOn = { ...(cur.betOn || {}) };
       const settled = settlePractice(cur, pair.a, pair.b, pair.total);
       settled.lastRepeat = lastRepeat;
+      settled.lastBetOn = lastBetOn;
       settled.shooterPnl = (cur.shooterPnl || 0) + settled.lastDelta;
       if (settled.shooter !== cur.shooter) {
         settled.lastShooterPnl = settled.shooterPnl;
@@ -1090,6 +1383,7 @@ export function usePractice() {
         ...cur,
         bank: cur.bank + back,
         bets: emptyPracticeBets(),
+        betOn: {},
         msg: `All bets down $${Math.round(back)}`,
       };
     });
@@ -1100,7 +1394,14 @@ export function usePractice() {
       if (cur.paused) return cur;
       const prev = undoStack.pop();
       if (!prev) return { ...cur, msg: "Nothing to undo." };
-      return { ...cur, bank: prev.bank, bets: cloneBets(prev.bets), take: false, msg: "Undid last bet." };
+      return {
+        ...cur,
+        bank: prev.bank,
+        bets: cloneBets(prev.bets),
+        betOn: { ...(prev.betOn || {}) },
+        take: false,
+        msg: "Undid last bet.",
+      };
     });
   }, []);
 
@@ -1234,6 +1535,8 @@ export function usePractice() {
     clearSpot,
     setChip,
     toggleTake,
+    toggleOffMode,
+    setAllBets,
     rollOnce,
     takeAllDown,
     undoBet,

@@ -1,11 +1,13 @@
 "use client";
 
-import { useRef, type ReactNode, type PointerEvent } from "react";
+import { createContext, useContext, useRef, type ReactNode, type PointerEvent } from "react";
 import { ChipStack } from "@/components/ChipDisc";
 import { buyVig, layVig } from "@/lib/payouts";
 import type { Box, Die, PracticeBets, PracticeSpot, Puck } from "@/lib/types";
 
 const POINTS: Box[] = [4, 5, 6, 8, 9, 10];
+const EMPTY_OFF = new Set<string>();
+const OffSpots = createContext<ReadonlySet<string>>(EMPTY_OFF);
 
 function Spot({
   spot,
@@ -30,6 +32,8 @@ function Spot({
   onMove?: (from: PracticeSpot, to: PracticeSpot) => void;
   children?: ReactNode;
 }) {
+  const offSpots = useContext(OffSpots);
+  const off = amount > 0 && offSpots.has(spot);
   const start = useRef<{ x: number; y: number } | null>(null);
 
   function down(e: PointerEvent<HTMLButtonElement>) {
@@ -71,9 +75,10 @@ function Spot({
       onPointerDown={down}
       onPointerUp={finish}
       onPointerCancel={finish}
-      className={`cs-spot ${className} ${amount ? "has-bet" : ""} ${hit ? "hit-roll" : ""}`}
-      aria-label={`${label || spot}${amount ? ` $${Math.round(amount)}` : ""}${vig ? ` + $${vig} vig` : ""}`}
+      className={`cs-spot ${className} ${amount ? "has-bet" : ""} ${off ? "is-off" : ""} ${hit ? "hit-roll" : ""}`}
+      aria-label={`${label || spot}${amount ? ` $${Math.round(amount)}` : ""}${off ? " off" : ""}${vig ? ` + $${vig} vig` : ""}`}
     >
+      {off ? <span className="cs-off-tag">OFF</span> : null}
       {children ?? <span className="cs-lab">{label}</span>}
       {amount > 0 ? <ChipStack amount={amount} compact /> : null}
       {amount > 0 && vig > 0 ? <span className="cs-vig">${vig} vig</span> : null}
@@ -140,6 +145,7 @@ export function PracticeFelt({
   onTap,
   onSwipeOff,
   onMove,
+  offSpots,
 }: {
   bets: PracticeBets;
   puck: Puck;
@@ -148,8 +154,10 @@ export function PracticeFelt({
   onTap: (spot: PracticeSpot) => void;
   onSwipeOff?: (spot: PracticeSpot) => void;
   onMove?: (from: PracticeSpot, to: PracticeSpot) => void;
+  offSpots?: ReadonlySet<string>;
 }) {
   return (
+    <OffSpots.Provider value={offSpots ?? EMPTY_OFF}>
     <div className="cs-table">
       <div className="cs-top">
       {POINTS.map((n) => (
@@ -435,5 +443,6 @@ export function PracticeFelt({
       </div>
       </div>
     </div>
+    </OffSpots.Provider>
   );
 }

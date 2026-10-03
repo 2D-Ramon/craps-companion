@@ -221,9 +221,13 @@ button {
 .practice-hud {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   min-height: 36px;
   flex-shrink: 0;
+}
+
+.practice-hud .hud-stat {
+  padding-right: 6px;
 }
 
 .hud-stat,
@@ -666,6 +670,30 @@ button {
 
 .cs-spot.has-bet {
   background: #1a1608;
+}
+
+.cs-spot.is-off {
+  background: #121212;
+}
+
+.cs-spot.is-off .table-chip {
+  opacity: 0.45;
+}
+
+.cs-off-tag {
+  position: absolute;
+  top: 1px;
+  left: 2px;
+  z-index: 5;
+  padding: 0 3px;
+  border-radius: 3px;
+  background: #6b1d16;
+  color: #fff;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  line-height: 1.35;
+  pointer-events: none;
 }
 
 .table-chip {
